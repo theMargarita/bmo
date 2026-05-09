@@ -1,0 +1,14 @@
+# requirements.txt
+# Install everything with: pip install -r requirements.txt
+
+ollama>=0.2.0
+python-dotenv>=1.0.0
+
+# Added later when building long-term memory:
+# chromadb>=0.5.0
+# sentence-transformers>=3.0.0
+
+# Added later when building voice:
+# openai-whisper
+# pyttsx3
+# pyaudio
