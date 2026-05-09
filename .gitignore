@@ -1,0 +1,15 @@
+#---- Python artifacts ----
+.env
+venv/
+env/
+__pychache__/
+*.pyc
+
+#---- VSCode artifacts ----
+.vscode/
+
+#models file
+
+#user config and memory
+memory.json
+config.json
