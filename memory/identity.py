@@ -140,4 +140,43 @@ class Identity:
         self.owner[key] = value
         self._save(OWNER_FILE, self.owner)
 
-    
+#----time based mood-----
+    def auto_shift_mood(self):
+        hour = datetime.now().hour
+        last_updated = self.identity.get("last_updated", "")
+        today = datetime.now().strftime("%Y-%m-%d") #get current date as string
+
+        # Only auto-shift mood once per day to avoid rapid changes
+        if last_updated != today:
+            if 5 <= hour < 9:
+                self.set_mood("reflective")
+            elif 9 <= hour < 12:
+                self.set_mood("focused")
+            elif 12 <= hour < 17:
+                self.set_mood("energetic")
+            elif 17 <= hour < 21:
+                self.set_mood("curious")
+            else:                
+                self.set_mood("tired")
+
+#----defaults-----
+    def _default_identity(self) -> dict:
+        return {
+            "mood": "curious",
+            "energy": "awake",
+            "current_goals": ["get to know the person I am talking to"],
+            "beliefs_about_self": ["I am still figuring out who I am"],
+            "things_i_find_interesting_lately": [],
+            "last_updated": datetime.now().strftime("%Y-%m-%d")
+        }
+
+    def _default_owner(self) -> dict:
+         return {
+            "name": "Margo",
+            "preferred_language": "auto",
+            "interests": [],
+            "response_style": "direct",
+            "active_projects": [],
+            "notes": "",
+            "relationship_started": datetime.now().strftime("%Y-%m-%d")
+        }
