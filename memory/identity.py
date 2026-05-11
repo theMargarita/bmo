@@ -57,13 +57,6 @@ class Identity:
     def get_mood(self) -> str:
         return self.identity.get("mood", "curious")
 
-    def set_mood(self, mood: str):
-        if mood not in MOOD_DESCRIPTIONS:
-            print(f"[BMO] Warning: '{mood}' is not a recognized mood. Valid options are: {list(MOOD_DESCRIPTIONS.keys())}")
-            return
-        self.identity["mood"] = mood
-        self.save_identity()
-
     def get_mood_description(self) -> str:
         mood = self.get_mood()
         return MOOD_DESCRIPTIONS.get(mood, f"Your current mood is {mood}.")    
@@ -116,3 +109,35 @@ class Identity:
             lines.append(f"Your current energy level is: {i['energy']}")
 
         return "\n".join(lines)
+    
+#-------setters and updaters-------
+    #saves mood ahdn updates the identity file
+    def set_mood(self, mood:str):
+        self.identity["mood"] = mood
+        self.save_identity()
+
+    def set_energy(self, energy:str):
+        self.identity["energy"] = energy
+        self.save_identity()
+
+    def add_goal(self, goal:str):
+        goals = self.identity.get("current_goals", [])
+        if goal not in goals:
+            goals.append(goal)
+        if len(goals) > 5:
+            goals.pop(0) #keep only the 5 most recent goals
+        self.identity["current_goals"] = goals
+        self.save_identity()
+
+    def add_interesting_thing(self, thing:str):
+        things = self.identity.get("things_i_find_interesting_lately", [])
+        if thing not in things:
+            things.append(thing)
+        self.identity["things_i_find_interesting_lately"] = things
+        self.save_identity()
+
+    def update_owner(self,key:str, value):
+        self.owner[key] = value
+        self._save(OWNER_FILE, self.owner)
+
+    
