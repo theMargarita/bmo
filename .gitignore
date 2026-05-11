@@ -13,3 +13,6 @@ __pychache__/
 #user config and memory
 memory.json
 config.json
+config.py
+
+personality.py
