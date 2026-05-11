@@ -5,14 +5,6 @@ class LLMClient:
     def __init__(self):
         self.client = ollama.Client(host=OLLAMA_URL)
         self.model = MODEL
-
-    def generate_response(self, messages):
-        try:
-            response = self.client.chat(self.model, messages)
-            return response['choices'][0]['message']['content']
-        except Exception as e:
-            print(f"Error generating response: {e}")
-            return "Sorry, I'm having trouble responding right now."
         
     def chat(self, messages: list[dict]) -> str:
         """
@@ -31,7 +23,8 @@ class LLMClient:
                 model=self.model,
                 messages=messages
             )
-            return response['choices'][0]['message']['content']
+            return response['message']['content']
+        
         except Exception as e:
             print(f"Error during chat: {e}")
             return "Sorry, I'm having trouble responding right now."
