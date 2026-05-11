@@ -53,7 +53,7 @@ class Identity:
         self.identity["last_updated"] = datetime.now().strftime("%Y-%m-%d")
         self._save(IDENTITY_FILE, self.identity)
 
-#-------getters and setters for identity attributes-------
+#-------getters-------
     def get_mood(self) -> str:
         return self.identity.get("mood", "curious")
 
@@ -93,3 +93,26 @@ class Identity:
         # if o.get("personality"):
         #     lines.append(f"They have a {o['personality']} personality.")
 
+    #basic info on BMO 
+    def get_bmo_context(self) -> str:
+        i = self.identity
+        lines = []
+
+        lines.append(f"Your currrent mood: {self.get_mood_description()}")
+
+        if i.get("current_goals"):
+            goals = "\n- " + "\n- ".join(i["current_goals"])
+            lines.append(f"Your current goals are: {goals}")
+
+        if i.get("beliefs_about_self"):
+            beliefs = "\n- " + "\n- ".join(i["beliefs_about_self"])
+            lines.append(f"You have the following beliefs about yourself: {beliefs}")
+
+        if i.get("things_i_find_interesting_lately"):
+            interests = "\n- " + "\n- ".join(i["things_i_find_interesting_lately"])
+            lines.append(f"Some things you've found interesting lately are: {interests}")
+
+        if i.get("energy"):
+            lines.append(f"Your current energy level is: {i['energy']}")
+
+        return "\n".join(lines)
