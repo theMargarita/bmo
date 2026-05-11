@@ -80,6 +80,10 @@ class Identity:
 
         if("notes" in o and o["notes"]):
             lines.append(f"Additional notes about them: {o['notes']}")
+
+        if o.get("favorite_shows_and_movies"):
+            shows = ", ".join(o["favorite_shows_and_movies"])
+            lines.append(f"Some of their favorite shows and movies are: {shows}.")
             
         return "\n".join(lines)
         
