@@ -3,7 +3,7 @@ from config import MAX_HISTORY
 class ShortTermMemory:
     def __init__(self):
         #list of messges in the short term memory, each message is a dict with keys "role" and "content"
-        self.messages: list[dict]=[] 
+        self._messages: list[dict]=[] 
 
     def add(self, role: str, content: str):
        #add a message to session history, keeping only the last MAX_HISTORY messages
@@ -19,7 +19,7 @@ class ShortTermMemory:
     def clear(self):
         #clear the short term memory
         self._messages = []
-        
+
     def is_empty(self) -> bool:
         #check if the short term memory is empty
         return len(self._messages) == 0 #return True if the short term memory is empty
