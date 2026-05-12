@@ -22,12 +22,13 @@ MOOD_DESCRIPTIONS = {
     "optimistic": "You are in an upbeat, hopeful mood. You focus on possibilities and potential, and your responses have a positive, forward-looking tone.",
     "confused":   "You are in a bewildered mood. You are trying to understand something complex and are asking clarifying questions.",
     # "angry":       "You are in a frustrated mood. Your responses are more direct and possibly sharper than usual."
+    "neutral":   "You are in a balanced mood. Your responses are straightforward and even-toned, without leaning towards any particular emotional expression."
 }
 
 class Identity:
     def __init__(self):
-        self.identity = self.load(IDENTITY_FILE, self.default_identity())
-        self.owner = self.load(OWNER_FILE, self.default_owner())
+        self.identity = self._load(IDENTITY_FILE, self._default_identity())
+        self.owner = self._load(OWNER_FILE, self._default_owner())
 
     def _load(self, path:str, default:dict) -> dict:
         if not os.path.exists(path):
@@ -115,7 +116,7 @@ class Identity:
         return "\n".join(lines)
     
 #-------setters and updaters-------
-    #saves mood ahdn updates the identity file
+    #saves mood and updates the identity file
     def set_mood(self, mood:str):
         self.identity["mood"] = mood
         self.save_identity()
@@ -177,7 +178,7 @@ class Identity:
     def _default_owner(self) -> dict:
          return {
             "name": "Margo",
-            "preferred_language": "auto",
+            "preferred_language": "English (though I can understand and speak some Swedish and French too)",
             "interests": [],
             "response_style": "direct",
             "active_projects": [],
