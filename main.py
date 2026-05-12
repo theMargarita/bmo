@@ -1,9 +1,10 @@
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from brain.llm import LLMClient
 from brain.prompt_builder import PromptBuilder
 from memory.short_term import ShortTermMemory
+from memory.identity import Identity
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def print_bmo(text:str):
     print(f"[BMO] {text}")
@@ -16,21 +17,22 @@ def main():
     print("BMO is starting up.")
     print_separator()
 
+    #Auto-set mood based on time of day (only on fresh startup)
+    identity = Identity()
+    identity.auto_shift_mood()
+
     #initialize the core components
     llm_client = LLMClient()
     short_term_memory = ShortTermMemory()
-    prompt_builder = PromptBuilder(mood="curious")
+    prompt_builder = PromptBuilder(identity_manager=identity)
 
     if not llm_client.is_available():
         print("\n[Error] Cannot reach Ollama.")
-        print("Make sure Ollama is running:")
-        print("  1. Open a new terminal")
-        print("  2. Run: ollama serve")
-        print("  3. Then run this file again\n")
+        print("Make sure Ollama is running and try again")
         sys.exit(1)
 
     print(f"\nModel : {llm_client.model}")
-    print(f"Mood  : {prompt_builder.mood}")
+    print(f"Mood  : {prompt_builder.identity_manager.get_bmo_context()}")
     print("\nType 'quit' to exit, 'clear' to reset memory, 'mood <word>' to change mood.")
     print_separator()
  
@@ -50,6 +52,7 @@ def main():
         if not user_input:
             continue
 
+        #built in commands
         if user_input.lower() == "quit":
             print_bmo("Goodbye, see you later!")
             break
@@ -65,8 +68,13 @@ def main():
             print_bmo(f"Mood changed to {new_mood}.")
             continue
 
+        if user_input.lower().startswith("energy "):
+            new_energy = user_input[7:].strip()
+            identity.set_energy(new_energy)
+            print_bmo(f"Energy level updated to {new_energy}.")
+            continue
+
         # Add user message to short-term memory
-        # The prompt builder will take care of trimming the history to the last MAX_HISTORY messages when building the prompt for the LLM.
         # The empty list [] is the memory slot — long-term memories plug in here later
         short_term_memory.add("user", user_input)
         messages = prompt_builder.build(history=short_term_memory.get_history(), memories=[])
@@ -74,8 +82,8 @@ def main():
         short_term_memory.add("assistant", response)
         print_bmo(response)
 
-    def get_opening_instruction() -> str:
-        return """You are BMO, a personal AI companion. Generate a single short opening line to start a conversation. 
+def get_opening_instruction() -> str:
+    return """You are BMO, an AI companion. Generate a single short opening line to start a conversation. 
     Do not introduce your capabilities. Do not say 'How can I help you today?'. 
     Just say something natural — curious, direct, warm. One or two sentences maximum.
     You can reference something genuinely interesting you have been thinking about, or simply acknowledge you are here and ready."""
