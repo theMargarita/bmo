@@ -75,12 +75,9 @@ with sqlite3.connect('data/bmo_memory.db') as connection:
     cursor.executescript(create_table_query)
     print("Tables created successfully")
 
-    cursor.connection.commit()  # Commit the changes to the database
+    cursor.connection.commit()  
     if cursor.connection.commit() is not None:
         cursor.connection.close()  # Close the database connection
 
     print ("Database setup complete.")
 
-#need to close the finished database connection
-# def close_connection():
-#     connection.close()

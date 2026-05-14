@@ -16,6 +16,11 @@ owner.json
 memory.json
 personality.py
 
+data/owner.json
+data/identity.json
+data/bmo.db
+data/chroma/
+
 #
 *.db
 *.sqlite
