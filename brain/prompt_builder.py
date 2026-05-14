@@ -48,3 +48,30 @@ class PromptBuilder:
     
     def set_mood(self, mood:str):
         self.identity_manager.set_mood(mood)
+
+
+    #-------fetching BMO's internal state from the database------
+    def build_with_personalities(self, user_input, user_id, memory_system):
+        thoughts = memory_system.fetch_bmos_thoughts(user_id) #fetch BMO's thoughts using the memory system
+        #build the prompt with the fetched thoughts and the user input
+        instructions = f"""
+            You are BMO, respond naturally to the user based on your current internal state and the context of the conversation.
+            {thoughts['user_context']}
+
+            [YOUR INTERNAL CONTEXT]
+            {thoughts['user_context']}
+
+            [CORE MEMORIES]
+            -{thoughts['core_memories'][0] if len(thoughts['core_memories']) > 0 else 'Nothing special'}
+            -{thoughts['core_memories'][1] if len(thoughts['core_memories']) > 1 else 'Nothing special'}
+            
+            [RECENT EVENTS]
+            -{thoughts['recent_events'][0] if len(thoughts['recent_events']) > 0 else 'No recent events'}
+            -{thoughts['recent_events'][1] if len(thoughts['recent_events']) > 1 else 'No recent events'}"""
+        
+        messages = [
+            {"role": "system", "content": instructions},
+            {"role": "user", "content": user_input}
+        ]
+
+        return messages
