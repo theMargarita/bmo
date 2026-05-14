@@ -1,7 +1,7 @@
 import sqlite3
 
 class BMOsMemory:
-    def __inint__(self, db_path='data/bmo_memory.db'):
+    def __init__(self, db_path='data/bmo_memory.db'):
         self.db_path = db_path
 
 
@@ -61,4 +61,47 @@ class BMOsMemory:
         ''', (conversation_id,))
             return cursor.fetchall() 
         
-    
+
+    #-------fetching BMO's thoughts for response generation------
+    def fetch_bmos_thoughts(self, user_id):
+        bmo_thoughts = { #structure of data returned - used to inform BMO's responses and behavior
+            "user_context": "",
+            "core_memories": [], 
+            "recent_events": []
+        }
+
+        with sqlite3.connection(self.db_path) as connection:
+            cursor = connection.cursor()
+            #first fetch user context
+            cursor.execute('''
+            SELECT name, facts, relationship_notes FROM users WHERE id = ? 
+        ''', (user_id))
+            user_data = cursor.fetchone()
+
+            if user_data:
+                bmo_thoughts["user_context"] = (f"You are talking to {user_data[0]}."
+                                                f"Facts you know about them: {user_data[1]}. "
+                                                f"Your private thoughts about them: {user_data[2]}.")
+                
+            #second fetch core memories - grab two random
+            cursor.execute('''
+            SELECT content
+            FROM memories
+            WHERE importance >= 7
+            ORDER BY RANDOM()
+            LIMIT 2    
+            ''',)
+
+            #store the core memories in the bmo_thoughts dict
+            bmo_thoughts["core_memories"] = [row[0] for row in cursor.fetchall()] 
+            
+            #third fetch recent events - grab 3 most recent
+            cursor.execute('''
+            SELECT content
+            FROM memories
+            ORDER BY created_at DESC
+            LIMIT 3
+''')
+            bmo_thoughts["recent_events"] = [row[0] for row in cursor.fetchall()]
+
+        return bmo_thoughts
