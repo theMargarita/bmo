@@ -1,20 +1,27 @@
 #---- Python artifacts ----
-.env
 venv/
 env/
+.env
 __pychache__/
 *.pyc
 
 #---- VSCode artifacts ----
 .vscode/
 
-#models file
-
 #user config and memory
-memory.json
 config.json
-owner.json
 config.py
 identity.json
-
+owner.json
+memory.json
 personality.py
+
+data/owner.json
+data/identity.json
+data/bmo.db
+data/chroma/
+
+#
+*.db
+*.sqlite
+*.sqlite3
