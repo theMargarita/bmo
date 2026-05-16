@@ -1,4 +1,3 @@
-from main import print_bmo, print_separator
 from brain.llm import LLMClient
 from brain.prompt_builder import PromptBuilder
 from memory.short_term import ShortTermMemory
@@ -6,6 +5,13 @@ from memory.identity import Identity
 import sys
 import random
 from brain.personality import get_system_prompt
+
+def print_bmo(text: str):
+    print(f"[BMO] {text}")
+
+
+def print_separator():
+    print("-" * 50)  # 50 is the number of dashes in the separator line
 
 
 def run_bmo():
@@ -53,7 +59,7 @@ def run_bmo():
                 "Take care!",
                 "Catch you later aligator!",
             ]
-            print_bmo(random(randomize))
+            print_bmo(random.choice(randomize))
             break
         if user_input.lower() == "clear":
             short_term_memory.clear()
@@ -87,3 +93,9 @@ def get_opening_instruction() -> str:
     Do not introduce your capabilities. Do not say 'How can I help you today?'. 
     Just say something natural — curious, direct, warm. One or two sentences maximum.
     You can reference something genuinely interesting you have been thinking about, or simply acknowledge you are here and ready."""
+
+if __name__ == "__main__":
+    # Import here to avoid circular issues
+    from brain.personality import get_system_prompt
+
+    run_bmo()
