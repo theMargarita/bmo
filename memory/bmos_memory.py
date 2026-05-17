@@ -1,9 +1,25 @@
+import os
 import sqlite3
 
 
 class BMOsMemory:
     def __init__(self, db_path="data/bmo_memory.db"):
         self.db_path = db_path
+
+        #ensure dict exists before we try to access it
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+
+    #count memories
+    def count(self) -> int:
+        try:
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT COUNT(*) FROM memories")
+                return cursor.fetchone()[0]
+        except sqlite3.Error as e:
+            print(f"Error occurred while counting memories: {e}")
+            return 0
+            
 
     # ------conversation table functions--------
     def save_chat_message(self, conversation_id, role, content):
@@ -30,7 +46,7 @@ class BMOsMemory:
             row = cursor.fetchone()
 
             if row:
-                updated_facts = f"{row[0] | [new_fact]}" if row[0] else new_fact
+                updated_facts = f"{row[0]} | {new_fact}" if row[0] else new_fact
                 cursor.execute(
                     """
             UPDATE users SET facts = ?, relationship_notes = ?, last_interaction = CURRENT_TIMESTAMP 
@@ -66,7 +82,7 @@ class BMOsMemory:
             connection.commit()
             return cursor.lastrowid
 
-    def get_conversation_history(self, conversation_id, summary=None):
+    def get_conversation_history(self, conversation_id):
         with sqlite3.connect(self.db_path) as connection:
             cursor = connection.cursor()
             cursor.execute(
@@ -85,14 +101,15 @@ class BMOsMemory:
             "recent_events": [],
         }
 
-        with sqlite3.connection(self.db_path) as connection:
+        with sqlite3.connect(self.db_path) as connection:
             cursor = connection.cursor()
             # first fetch user context
             cursor.execute(
                 """
             SELECT name, facts, relationship_notes FROM users WHERE id = ? 
         """,
-                (user_id),
+                #need comma to make it a tuple - otherwise it treats it as a single value and throws an error
+                (user_id,), 
             )
             user_data = cursor.fetchone()
 
