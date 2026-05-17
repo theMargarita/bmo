@@ -5,6 +5,7 @@ from memory.identity import Identity
 import sys
 import random
 from brain.personality import get_system_prompt
+from memory.bmos_memory import BMOsMemory
 
 def print_bmo(text: str):
     print(f"[BMO] {text}")
@@ -25,10 +26,12 @@ def run_bmo():
     llm_client = LLMClient()
     short_term_memory = ShortTermMemory()
     prompt_builder = PromptBuilder(identity_manager=identity)
+    
     if not llm_client.is_available():
         print("\n[Error] Cannot reach Ollama.")
         print("Make sure Ollama is running and try again")
         sys.exit(1)
+
     print(f"\nModel : {llm_client.model}")
     print(f"Mood  : {prompt_builder.identity_manager.get_bmo_context()}")
     print(
@@ -36,21 +39,29 @@ def run_bmo():
     )
     print_separator()
 
+
     # opening line from BMO
     opening_promt = [
         {"role": "system", "content": get_system_prompt()},
     ]
     opening = llm_client.chat(opening_promt)
     print_bmo(opening)
+    
+    bmo_memory = BMOsMemory()
+    conversation_id = bmo_memory.save_conversations(user_id=1, message="Session started.")
+
     while True:
         # contunue to propmt even if I press enter without typing anything
         try:
             user_input = input("\nYou: ").strip()
+
         except (KeyboardInterrupt, EOFError):
             print("\n\nBMO: See you.\n")
             break
+
         if not user_input:
             continue
+
         # built in commands
         if user_input.lower() == "quit":
             randomize = [
@@ -61,15 +72,18 @@ def run_bmo():
             ]
             print_bmo(random.choice(randomize))
             break
+
         if user_input.lower() == "clear":
             short_term_memory.clear()
             print_bmo("Memory cleared. Fresh start!")
             continue
+
         if user_input.lower().startswith("mood "):
             new_mood = user_input[5:].strip()
             prompt_builder.set_mood(new_mood)
             print_bmo(f"Mood changed to {new_mood}.")
             continue
+
         if user_input.lower().startswith("energy "):
             new_energy = user_input[7:].strip()
             identity.set_energy(new_energy)
@@ -77,10 +91,19 @@ def run_bmo():
             continue
         # Add user message to short-term memory
         # The empty list [] is the memory slot — long-term memories plug in here later
+        BMOsMemory.save_chat_message(conversation_id, "user", user_input)
+        relevant_memories = BMOsMemory.seach_contect(user_input)
+
+        bmo_thought = BMOsMemory.fetch_bmos_thoughts(user_id=1)
+
+
         short_term_memory.add("user", user_input)
         messages = prompt_builder.build(
-            history=short_term_memory.get_history(), memories=[]
+            history=short_term_memory.get_history(), 
+            memories=relevant_memories,
+            bmo_thought=bmo_thought
         )
+        
         response = llm_client.chat(messages)
         short_term_memory.add("assistant", response)
         print_bmo(response)
