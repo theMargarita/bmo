@@ -25,7 +25,7 @@ class BMOsMemory:
         #maps to save_conversations concept
         return self.save_conversation(user_id, f"Session started./n BMO's mood {mood}")
     
-
+    # -------conversation table functions------
     def save_conversations(self, user_id, message, summary=None):
         with sqlite3.connect(self.db_path) as connection:
             cursor = connection.cursor()
@@ -33,7 +33,6 @@ class BMOsMemory:
                            (user_id, message, summary))
             connection.commit()
             return cursor.lastrowid
-        
         
     # ------conversation table functions--------
     def save_chat_message(self, conversation_id, role, content):
@@ -46,7 +45,6 @@ class BMOsMemory:
                 (conversation_id, role, content),
             )
             connection.commit()
-            
 
 #------end session---
     def end_session(self, conversation_id, summary = None):
@@ -57,6 +55,17 @@ class BMOsMemory:
                     "UPDATE conversations SET summary = ? WHERE id = ?"
                 )
                 connection.commit()
+    
+    #saving 'core' memories
+    def save(self, content:str, source:str, importance: int = 0, tags:list = None):
+        if tags:
+            source = f"{source} | tags: {','.join(tags)}"
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+        "INSERT INTO memories (content, source, importance) VALUES (?,?,?)",
+        (content, source, importance))
+            connection.commit()
 
     # -----------user table functions-----------
     def update_user_relation(self, user_id, new_fact, relationship_notes):
@@ -93,19 +102,6 @@ class BMOsMemory:
             return (
                 cursor.fetchone()
             )  # returns the most recent BMO state as a tuple (description, status)
-
-    # -------conversation table functions------
-    def save_conversation(self, user_id, message, summary=None):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                """
-        INSERT INTO conversations (user_id, message, summary) VALUES (?,?,?)
-        """,
-                (user_id, message, summary),
-            )
-            connection.commit()
-            return cursor.lastrowid
 
     def get_conversation_history(self, conversation_id, summary = None):
         with sqlite3.connect(self.db_path) as connection:
