@@ -114,6 +114,16 @@ class BMOsMemory:
             )
             return cursor.fetchall()
 
+    def get_recent(self, limit: int  =5) -> list:
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT importance, content FROM memories ORDER BY created_At DESC LIMIT ?", 
+                (limit,))
+            
+            return [{"importance": row[0], "content": row[1]} for row in cursor.fetchall()]
+        
+#searches memory table for content containing any work (not more than 4 letters) 
     def seach_contect(self, query: str) -> list:
         #basic keyword fallback search so it doesnt crash
         words = [w for w in query.lower().split() if len(w) > 4]
