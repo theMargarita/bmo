@@ -20,7 +20,21 @@ class BMOsMemory:
             print(f"Error occurred while counting memories: {e}")
             return 0
             
+    #---start session-----
+    def start_session(self, mood: str, user_id: int = 1) -> int:
+        #maps to save_conversations concept
+        return self.save_conversation(user_id, f"Session started./n BMO's mood {mood}")
+    
 
+    def save_conversations(self, user_id, message, summary=None):
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.cursor()
+            cursor.execute("INSERT INTO conversations (user_id, message, summary) VALUES (?,?,?)",
+                           (user_id, message, summary))
+            connection.commit()
+            return cursor.lastrowid
+        
+        
     # ------conversation table functions--------
     def save_chat_message(self, conversation_id, role, content):
         with sqlite3.connect(self.db_path) as connection:
@@ -32,6 +46,17 @@ class BMOsMemory:
                 (conversation_id, role, content),
             )
             connection.commit()
+            
+
+#------end session---
+    def end_session(self, conversation_id, summary = None):
+        if summary:
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "UPDATE conversations SET summary = ? WHERE id = ?"
+                )
+                connection.commit()
 
     # -----------user table functions-----------
     def update_user_relation(self, user_id, new_fact, relationship_notes):
@@ -82,7 +107,7 @@ class BMOsMemory:
             connection.commit()
             return cursor.lastrowid
 
-    def get_conversation_history(self, conversation_id):
+    def get_conversation_history(self, conversation_id, summary = None):
         with sqlite3.connect(self.db_path) as connection:
             cursor = connection.cursor()
             cursor.execute(
