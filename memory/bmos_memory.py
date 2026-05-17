@@ -114,6 +114,29 @@ class BMOsMemory:
             )
             return cursor.fetchall()
 
+    def seach_contect(self, query: str) -> list:
+        #basic keyword fallback search so it doesnt crash
+        words = [w for w in query.lower().split() if len(w) > 4]
+        result = []
+        if not words: 
+            return result
+
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.cursor()
+            for w in words: 
+                cursor.execute("" \
+                "SELECT content " \
+                "FROM memories " \
+                "WHERE content " \
+                "LIKE LIKE ? LIMIT 1", (f"%{w}%",))
+                row = cursor.fetchone()
+
+                if row and row[0] not in result:
+                    result.append(row[0])
+
+        return result
+
+
     # -------fetching BMO's thoughts for response generation------
     def fetch_bmos_thoughts(self, user_id):
         bmo_thoughts = {  # structure of data returned - used to inform BMO's responses and behavior
