@@ -25,3 +25,6 @@ data/chroma/
 *.db
 *.sqlite
 *.sqlite3
+
+#reports
+bmo_report.txt

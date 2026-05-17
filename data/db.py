@@ -1,13 +1,13 @@
 import sqlite3
 
-with sqlite3.connect('data/bmo_memory.db') as connection:
+with sqlite3.connect("data/bmo_memory.db") as connection:
     # Create a cursor object to interact with the database
     # Cursor is used to execute SQL commands and queries on the database
     cursor = connection.cursor()
     print("Database created and connected successfully")
 
     # SQL commands with table descriptions
-    create_table_query = '''
+    create_table_query = """
         -- Table: memories
         -- Stores individual memory entries with optional source and importance.
         CREATE TABLE IF NOT EXISTS memories (
@@ -69,15 +69,14 @@ with sqlite3.connect('data/bmo_memory.db') as connection:
             interests JSON,                  
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
         );
-    '''
+    """
 
     # Execute the SQL commands to create the tables
     cursor.executescript(create_table_query)
     print("Tables created successfully")
 
-    cursor.connection.commit()  
+    cursor.connection.commit()
     if cursor.connection.commit() is not None:
         cursor.connection.close()  # Close the database connection
 
-    print ("Database setup complete.")
-
+    print("Database setup complete.")
