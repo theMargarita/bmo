@@ -138,7 +138,7 @@ class BMOsMemory:
                 "SELECT content " \
                 "FROM memories " \
                 "WHERE content " \
-                "LIKE LIKE ? LIMIT 1", (f"%{w}%",))
+                "LIKE ? LIMIT 1", (f"%{w}%",))
                 row = cursor.fetchone()
 
                 if row and row[0] not in result:
