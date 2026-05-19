@@ -94,9 +94,10 @@ def run_bmo():
         memo = BMOsMemory()
         content = user_input
         memo.save_chat_message(conversation_id, "user", content)
-        relevant_memories = memo.seach_contect(user_input)
+        relevant_memories = memo.seach_context(user_input)
 
         bmo_thought = memo.fetch_bmos_thoughts(user_id=1)
+        memo.save("Some memory content", "source", importance=5)
 
 
         short_term_memory.add("user", user_input)

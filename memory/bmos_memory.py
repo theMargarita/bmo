@@ -52,7 +52,8 @@ class BMOsMemory:
             with sqlite3.connect(self.db_path) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "UPDATE conversations SET summary = ? WHERE id = ?"
+                    "UPDATE conversations SET summary = ? WHERE id = ?",
+                    summary, conversation_id
                 )
                 connection.commit()
     
@@ -124,7 +125,7 @@ class BMOsMemory:
             return [{"importance": row[0], "content": row[1]} for row in cursor.fetchall()]
         
 #searches memory table for content containing any work (not more than 4 letters) 
-    def seach_contect(self, query: str) -> list:
+    def seach_context(self, query: str) -> list:
         #basic keyword fallback search so it doesnt crash
         words = [w for w in query.lower().split() if len(w) > 4]
         result = []
@@ -198,3 +199,11 @@ class BMOsMemory:
             bmo_thoughts["recent_events"] = [row[0] for row in cursor.fetchall()]
 
         return bmo_thoughts
+    
+    def create_user(self, name, facts="", relationship_notes=""):
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.cursor()
+            cursor.execute("" \
+            "INSERT INTO users (user; facts; relationship_notes) VALUES (?,?,?)", 
+            name, facts, relationship_notes)
+            connection.commit()
