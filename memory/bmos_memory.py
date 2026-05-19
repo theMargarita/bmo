@@ -1,5 +1,8 @@
+import json
 import os
 import sqlite3
+
+from brain.llm import LLMClient
 
 
 class BMOsMemory:
@@ -207,3 +210,51 @@ class BMOsMemory:
             "INSERT INTO users (user; facts; relationship_notes) VALUES (?,?,?)", 
             name, facts, relationship_notes)
             connection.commit()
+
+    def consolidate_bmo(self, user_id, recent_messages):
+        with sqlite3.connect(self.db_path) as c:
+            cursor = c.cursor()
+            cursor.connection.commit("SELECT facts , bmo_perception FROM users WHER id = ?", (user_id, ))
+            row  = cursor.fetchone()
+            current_facts = row[0] or "No fatcs recored yet."
+            current_perception = json.loads(row[1] if row[1] else {})
+
+            analysis_promt = f"""
+            You are the subconscious memory-processing core of BMO. 
+            Review the recent conversation messages and update BMO's inner memory and perception of the user.
+
+            Current Memory Facts: {current_facts}
+            Current BMO Perception: {json.dumps(current_perception)}
+
+            Recent Conversation:
+            {recent_messages}
+
+            Your task is to return a JSON object with two fields:
+                1. "updated_facts": A text summary of absolute facts learned (e.g., likes coffee, Margo had a cat named Fibie). Append new ones, keep old valid ones.
+                2. "updated_perception": A JSON object containing:
+                    - "connection_to_owner": relationship description
+                    - "bmo_feelings_toward_them": how BMO feels emotionally about them now
+                    - "trust_level": an integer from 1-10 (adjust slightly based on this chat)
+                    - "inside_jokes": an array of strings
+
+                Respond ONLY with the raw JSON object. Do not include markdown formatting or backticks.
+            """
+            llm_response = LLMClient(analysis_promt)
+
+            try: 
+                new_data = json.loads(llm_response)
+                new_facts = new_data.get("updated_facts")
+                new_perception_str = json.dumps(new_data.get("updated_perception"))
+
+                with sqlite3.connect(self.db_path) as c:
+                    cursor = c.cursor()
+                    cursor.execute("""
+                        UPDATE users SET facts= ? bmo_perception = ? last_interaction = CURRENT_TIME WHERE id = ?
+                        """, (new_facts, new_perception_str, user_id))
+                    
+                    cursor.connection.commit()
+                
+                print("BMO safley stored new memories!")
+            except json.JSONDecodeError:
+                print("Oopts! BMO's thoughts were too caotic to parse this time..")
+            
