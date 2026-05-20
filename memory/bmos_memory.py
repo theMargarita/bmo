@@ -13,6 +13,27 @@ class BMOsMemory:
         # Instantiate the LLM client for consolidation
         self.llm = LLMClient()
 
+    def seed_database(self, owner_name="Creator"):
+        with sqlite3.connect(self.db_path)as conn:
+            cursor = conn.cursor()
+            #checks if roles exists, if not - hardcode them
+            cursor.connection.execute("SELECT COUNT(*) FROM roles")
+            if cursor.fetchnone()[0] == 0:
+                cursor.execute("INSERT INTO roles (name, role_description) VALUES ('Owner', '{\"access\": \"absolute\"}')")
+                cursor.execute("INSERT INTO roles (name, role_description) VALUES ('Guest', '{\"access\": \"limited\"}')")
+
+                conn.commit()
+                print("[Databse] Default roles injected")
+            #check if default user exists, if not - create user ID
+            cursor.execute("SELECT COUNT(*) FROM users")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                    INSERT INTO users (name, facts, role_id, bmo_perception) 
+                               VALUES (?, 'Is the creator and owner of BMO.', 1, '{}')
+                    """, (owner_name,))
+                conn.commit()
+                print(f"[Database] Default user '{owner_name} created as User ID 1.")
+
     # Count memories
     def count(self) -> int:
         try:
@@ -31,70 +52,89 @@ class BMOsMemory:
     
     # -------conversation table functions------
     def save_conversations(self, user_id, message, summary=None):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                "INSERT INTO conversations (user_id, message, summary) VALUES (?,?,?)",
-                (user_id, message, summary)
-            )
-            connection.commit()
-            return cursor.lastrowid
+        try:
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT INTO conversations (user_id, message, summary) VALUES (?,?,?)",
+                    (user_id, message, summary)
+                )
+                connection.commit()
+                return cursor.lastrowid
+        except sqlite3.Error as e:
+            print(f"Error saving conversations: {e}")
+            return None
         
     # ------message table functions--------
     def save_chat_message(self, conversation_id, role, content):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                "INSERT INTO messages (conversation_id, role, content) VALUES (?,?,?)",
-                (conversation_id, role, content),
-            )
-            connection.commit()
+        try:
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT INTO messages (conversation_id, role_id, content) VALUES (?,?,?)",
+                    (conversation_id, role, content),
+                )
+                connection.commit()
+        except sqlite3.Error as e:
+            print(f"Could not save save latest chat message: {e}")
+            return None
 
     # ------end session---
     def end_session(self, conversation_id, summary=None):
-        if summary:
-            with sqlite3.connect(self.db_path) as connection:
-                cursor = connection.cursor()
-                # Wrapped arguments in a tuple
-                cursor.execute(
-                    "UPDATE conversations SET summary = ? WHERE id = ?",
-                    (summary, conversation_id)
-                )
-                connection.commit()
+        try:
+            if summary:
+                with sqlite3.connect(self.db_path) as connection:
+                    cursor = connection.cursor()
+                    # Wrapped arguments in a tuple
+                    cursor.execute(
+                        "UPDATE conversations SET summary = ? WHERE id = ?",
+                        (summary, conversation_id,)
+                    )
+                    connection.commit()
+        except sqlite3.Error as e:
+            print(f"Could not create or save a summary: {e}")
+            return None
+        
     
     # Saving 'core' memories
     def save(self, content: str, source: str, importance: int = 0, tags: list = None):
-        if tags:
-            source = f"{source} | tags: {','.join(tags)}"
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                "INSERT INTO memories (content, source, importance) VALUES (?,?,?)",
-                (content, source, importance)
-            )
-            connection.commit()
+        try:
+            if tags:
+                source = f"{source} | tags: {','.join(tags)}"
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT INTO memories (content, source, importance) VALUES (?,?,?)",
+                    (content, source, importance)
+                )
+                connection.commit()
+        except sqlite3.Error as e:
+            print(f"Error saving memory: {e}")
 
     # -----------user table functions-----------
     def update_user_relation(self, user_id, new_fact, bmo_perception_json):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                "SELECT facts FROM users WHERE id = ?",
-                (user_id,),
-            )
-            row = cursor.fetchone()
-
-            if row:
-                updated_facts = f"{row[0]} | {new_fact}" if row[0] else new_fact
+        try:
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
                 cursor.execute(
-                    """
-                    UPDATE users 
-                    SET facts = ?, bmo_perception = ?, last_interaction = CURRENT_TIMESTAMP 
-                    WHERE id = ?
-                    """,
-                    (updated_facts, bmo_perception_json, user_id),
+                    "SELECT facts FROM users WHERE id = ?",
+                    (user_id,),
                 )
-                connection.commit()
+                row = cursor.fetchone()
+
+                if row:
+                    updated_facts = f"{row[0]} | {new_fact}" if row[0] else new_fact
+                    cursor.execute(
+                        """
+                        UPDATE users 
+                        SET facts = ?, bmo_perception = ?, last_interaction = CURRENT_TIMESTAMP 
+                        WHERE id = ?
+                        """,
+                        (updated_facts, bmo_perception_json, user_id,),
+                    )
+                    connection.commit()
+        except sqlite3.Error as e:
+            print(f"Could not update user: {e}")
 
     # --------bmo state functions------------
     def get_bmo_state(self):
@@ -109,7 +149,7 @@ class BMOsMemory:
         with sqlite3.connect(self.db_path) as connection:
             cursor = connection.cursor()
             cursor.execute(
-                "SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
+                "SELECT role_id, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
                 (conversation_id,),
             )
             return cursor.fetchall()
@@ -191,15 +231,15 @@ class BMOsMemory:
             )
             connection.commit()
 
-    def consolidate_bmo(self, user_id, recent_messages):
+    def consolidate_bmo(self, user_id, conversation_id, recent_messages):
         with sqlite3.connect(self.db_path) as c:
             cursor = c.cursor()
-            # Changed .commit() to .execute() and fixed 'WHER' typo
+            
             cursor.execute("SELECT facts, bmo_perception FROM users WHERE id = ?", (user_id,))
             row = cursor.fetchone()
             
             if not row:
-                print(f"User with ID {user_id} not found.")
+                print(f"User with ID {user_id} not found.Can not consolidate memory.")
                 return
 
             current_facts = row[0] or "No facts recorded yet."
@@ -217,12 +257,10 @@ class BMOsMemory:
             {recent_messages}
 
             Your task is to return a JSON object with two fields:
-                1. "updated_facts": A text summary of absolute facts learned. Append new ones, keep old valid ones.
-                2. "updated_perception": A JSON object containing:
-                    - "connection_to_owner": relationship description
-                    - "bmo_feelings_toward_them": how BMO feels emotionally about them now
-                    - "trust_level": an integer from 1-10
-                    - "inside_jokes": an array of strings
+                1. "updated_facts": Text summary of absolute facts learned about the user.
+                2. "updated_perception": JSON object with "connection_to_owner", "bmo_feelings_toward_them", "trust_level" (1-10), and "inside_jokes" (array).
+                3. "conversation_summary": A 1 to 2 sentence summary of this entire conversation.
+                4. "new_core_memories": An array of strings. Extract 1 or 2 highly important distinct concepts, events, or preferences mentioned. If nothing important happened, return an empty array [].
 
             Respond ONLY with the raw JSON object. Do not include markdown formatting or backticks.
             """
@@ -233,8 +271,11 @@ class BMOsMemory:
 
             try: 
                 new_data = json.loads(llm_response)
+                #
                 new_facts = new_data.get("updated_facts")
                 new_perception_str = json.dumps(new_data.get("updated_perception"))
+                summary = new_data.get("conversation_summary", "No summary provided.")
+                core_memories = new_data.get("new_core_memories", [])
 
                 with sqlite3.connect(self.db_path) as conn:
                     cursor = conn.cursor()
@@ -243,9 +284,15 @@ class BMOsMemory:
                         UPDATE users 
                         SET facts = ?, bmo_perception = ?, last_interaction = CURRENT_TIMESTAMP 
                         WHERE id = ?
-                        """, (new_facts, new_perception_str, user_id))
+                        """, (new_facts, new_perception_str, user_id,))
                     conn.commit()
+
+                    self.end_session(conversation_id, summary)
+
+                    for memory_text in core_memories:
+                        #got to give high importance so bmo remebers them
+                        self.save(content=memory_text, source="Chat Consolidation", importance=8)
                 
-                print("BMO safely stored new memories! ✦")
+                print("BMO safely stored new memories!")
             except json.JSONDecodeError:
                 print("Oops! BMO's thoughts were too chaotic to parse this time..")
