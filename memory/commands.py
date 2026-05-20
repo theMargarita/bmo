@@ -8,7 +8,7 @@ from brain.personality import get_system_prompt
 from memory.bmos_memory import BMOsMemory
 
 def print_bmo(text: str):
-    print(f"[BMO] {text}")
+    print(f"\n[BMO]: {text}")
 
 
 def print_separator():
@@ -72,7 +72,7 @@ def run_bmo():
             history_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent_history])
             
             # Run the automated database update!
-            bmo_memory.consolidate_bmo(user_id=1, recent_messages=history_text)
+            bmo_memory.consolidate_bmo(user_id=1,conversation_id=conversation_id , recent_messages=history_text)
             
             randomize = [
                 "Goodbye!",

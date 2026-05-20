@@ -31,12 +31,11 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             conversation_id INTEGER NOT NULL, 
-            role_id INTEGER NOT NULL,
-            --role TEXT NOT NULL,                
+            role_id INTEGER NOT NULL,                
             content TEXT NOT NULL,            
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
             FOREIGN KEY (conversation_id) REFERENCES conversations(id),
-            FOREIGN KEY (ROLE_ID) REFERENCES roles(id)
+            FOREIGN KEY (role_id) REFERENCES roles(id)
         );
 
         --for bmo
