@@ -1,15 +1,13 @@
 import sqlite3
 
+# The 'with' statement automatically handles closing the connection when done!
 with sqlite3.connect("data/bmo_memory.db") as connection:
-    # Create a cursor object to interact with the database
-    # Cursor is used to execute SQL commands and queries on the database
     cursor = connection.cursor()
     print("Database created and connected successfully")
 
     # SQL commands with table descriptions
     create_table_query = """
         -- Table: memories
-        -- Stores individual memory entries with optional source and importance.
         CREATE TABLE IF NOT EXISTS memories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,       
@@ -20,63 +18,64 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         );
 
         -- Table: conversations
-        -- Stores conversations, each linked to a user (users.id).
         CREATE TABLE IF NOT EXISTS conversations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL, 
             message TEXT NOT NULL,   
             summary TEXT, 
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
-
+        --for bmo and me
         -- Table: messages
-        -- Stores messages within a conversation, linked to conversations(id).
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             conversation_id INTEGER NOT NULL, 
-            role TEXT NOT NULL,               
+            role_id INTEGER NOT NULL,                
             content TEXT NOT NULL,            
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-            FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+            FOREIGN KEY (role_id) REFERENCES roles(id)
         );
 
+        --for bmo
+        -- Table: roles
+        -- Stores information about roles (e.g., owner, users, guests, acquaintances etc), including permissions or descriptions.
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name JSON NOT NULL,            
+            role_description JSON,     
+            relationship_notes JSON,             
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+        );
+
+        -- for bmo
         -- Table: users
-        -- Stores user profiles and relationship notes.
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,              
             facts TEXT,                      
+            role_id INTEGER,
+            bmo_perception JSON,  -- BMO's internal thoughts and relationship mapping
             last_interaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-            relationship_notes TEXT,        
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (role_id) REFERENCES roles(id)  
         );
-
+        
+        -- this is mostly for me
         -- Table: bmo_state
-        -- Stores the state and status of the BMO system.
         CREATE TABLE IF NOT EXISTS bmo_state (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             description TEXT,                
             status TEXT,                     
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
-        -- Table: owner
-        -- Stores information about the owner, including preferences and interests.
-        CREATE TABLE IF NOT EXISTS owner (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,            
-            preferred_language TEXT,      
-            interests JSON,                  
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
-        );
     """
 
     # Execute the SQL commands to create the tables
     cursor.executescript(create_table_query)
+    
+    # Commit the transaction
+    connection.commit()
     print("Tables created successfully")
-
-    cursor.connection.commit()
-    if cursor.connection.commit() is not None:
-        cursor.connection.close()  # Close the database connection
-
     print("Database setup complete.")
