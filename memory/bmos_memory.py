@@ -17,8 +17,8 @@ class BMOsMemory:
         with sqlite3.connect(self.db_path)as conn:
             cursor = conn.cursor()
             #checks if roles exists, if not - hardcode them
-            cursor.connection.execute("SELECT COUNT(*) FROM roles")
-            if cursor.fetchnone()[0] == 0:
+            cursor.execute("SELECT COUNT(*) FROM roles")
+            if cursor.fetchone()[0] == 0:
                 cursor.execute("INSERT INTO roles (name, role_description) VALUES ('Owner', '{\"access\": \"absolute\"}')")
                 cursor.execute("INSERT INTO roles (name, role_description) VALUES ('Guest', '{\"access\": \"limited\"}')")
 

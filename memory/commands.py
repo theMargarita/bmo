@@ -50,6 +50,7 @@ def run_bmo():
     
     # Instantiate database once and use it everywhere
     bmo_memory = BMOsMemory()
+    bmo_memory.seed_database()
     conversation_id = bmo_memory.save_conversations(user_id=1, message="Session started.")
 
     while True:
