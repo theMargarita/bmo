@@ -1,0 +1,56 @@
+name: BMO CI
+
+on:
+  push:
+    branches: [main, dev]
+
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # 3. Cache pip packages
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      # 4. Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest ruff python-dotenv
+
+      # 5. Create dummy data files
+      - name: Create dummy data files
+        run: |
+          mkdir -p data
+
+          echo '{"mood":"curious","energy":"awake","current_goals":[],"beliefs_about_self":[],"things_i_find_interesting_lately":[],"last_updated":"2026-01-01"}' > data/identity.json
+
+          echo '{"name":"test","preferred_language":"auto","interests":[],"response_style":"direct","active_projects":[],"notes":"","relationship_started":"2026-01-01"}' > data/owner.json
+
+      # 6. Run Ruff
+      - name: Run Ruff
+        run: |
+          ruff check .
+          ruff format . --check
+
+      # 7. Run tests
+      - name: Run tests
+        run: |
+          pytest tests/ -v
