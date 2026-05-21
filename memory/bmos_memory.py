@@ -296,3 +296,14 @@ class BMOsMemory:
                 print("BMO safely stored new memories!")
             except json.JSONDecodeError:
                 print("Oops! BMO's thoughts were too chaotic to parse this time..")
+
+    def update_bmo_state(self, description, status):
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO bmo_state (description, status) VALUES (?,?)",
+                               (description, status,))
+                
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Could not update BMO's status: {e}")
