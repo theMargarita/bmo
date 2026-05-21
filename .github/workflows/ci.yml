@@ -42,7 +42,7 @@ jobs:
 
           echo '{"mood":"curious","energy":"awake","current_goals":[],"beliefs_about_self":[],"things_i_find_interesting_lately":[],"last_updated":"2026-01-01"}' > data/identity.json
 
-          echo '{"name":"test","preferred_language":"auto","interests":[],"response_style":"direct","active_projects":[],"notes":"","relationship_started":"2026-01-01"}' > data/owner.json
+          echo '{"name":"test","preferred_language":"auto","interests":[],"response_style":"direct","active_projects":[],"notes":"","relationship_started":"2026-05-01"}' > data/owner.json
 
       # 6. Run Ruff
       - name: Run Ruff
