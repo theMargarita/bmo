@@ -1,12 +1,15 @@
 import sys
-import os 
+import os
 from memory.short_term import ShortTermMemory
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def test_add_message():
     mem = ShortTermMemory()
     mem.add("Hello", "Goodbye")
     assert len(mem.get_history()) == 1
+
 
 def test_get_history():
     mem = ShortTermMemory()
@@ -14,12 +17,13 @@ def test_get_history():
         mem.add("user", f"message {i}")
     assert len(mem.get_history()) <= 20
 
+
 def test_clear_wipes_messages():
     mem = ShortTermMemory()
     mem.add("USER", "Something text")
     mem.clear()
     assert mem.is_empty()
-    
+
 
 def test_roles_are_correct():
     mem = ShortTermMemory()

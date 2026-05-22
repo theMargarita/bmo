@@ -6,5 +6,3 @@ from memory.commands import run_bmo
 
 
 run_bmo()
-
-
