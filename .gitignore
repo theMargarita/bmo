@@ -10,7 +10,7 @@ __pychache__/
 
 #user config and memory
 config.json
-config.py
+# config.py
 identity.json
 owner.json
 memory.json
