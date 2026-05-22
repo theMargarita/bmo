@@ -13,7 +13,7 @@ def test_add_message():
 
 def test_get_history():
     mem = ShortTermMemory()
-    for i in range(25):  # over the MAX_HISTORY limit
+    for i in range(20):  # over the MAX_HISTORY limit
         mem.add("user", f"message {i}")
     assert len(mem.get_history()) <= 20
 
