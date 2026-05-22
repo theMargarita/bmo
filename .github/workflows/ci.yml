@@ -40,13 +40,13 @@ jobs:
           pip install pytest ruff==0.15.13 python-dotenv
 
       # 5. Create dummy data files
-      - name: Create dummy data files
-        run: |
-          mkdir -p data
+      # - name: Create dummy data files
+      #   run: |
+      #     mkdir -p data
 
-          echo '{"mood":"curious","energy":"awake","current_goals":[],"beliefs_about_self":[],"things_i_find_interesting_lately":[],"last_updated":"2026-01-01"}' > data/identity.json
+      #     echo '{"mood":"curious","energy":"awake","current_goals":[],"beliefs_about_self":[],"things_i_find_interesting_lately":[],"last_updated":"2026-01-01"}' > data/identity.json
 
-          echo '{"name":"test","preferred_language":"auto","interests":[],"response_style":"direct","active_projects":[],"notes":"","relationship_started":"2026-05-01"}' > data/owner.json
+      #     echo '{"name":"test","preferred_language":"auto","interests":[],"response_style":"direct","active_projects":[],"notes":"","relationship_started":"2026-05-01"}' > data/owner.json
 
       # 6. Run Ruff
       - name: Run Ruff
