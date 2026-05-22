@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.12"
 
       # 3. Cache pip packages
       - name: Cache pip
@@ -54,3 +54,23 @@ jobs:
       - name: Run tests
         run: |
           pytest tests/ -v
+  #this part is for raspberry pi (that is not implemented yet)
+  deploy:
+    needs: tests # only runs if tests pass
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # only on main branch
+
+    steps:
+      - name: Deploy to Raspberry Pi
+      #allows to execute remote ssh commands in your github workflows
+        uses: appleboy/ssh-action@v1 
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          script: |
+            cd ~/bmo
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            sudo systemctl restart bmo
