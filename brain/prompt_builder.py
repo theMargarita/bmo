@@ -8,6 +8,8 @@ from memory.bmos_memory import BMOsMemory
         2. Injected long-term memories if any (added as a system message)
         3. Current session conversation history
         """
+
+
 class PromptBuilder:
     def __init__(self, identity_manager: Identity):
         self.identity_manager = identity_manager
@@ -53,16 +55,16 @@ class PromptBuilder:
     def build_with_personalities(self, user_input, user_id, memory_system, history):
         memory_system = BMOsMemory()
         thoughts = memory_system.fetch_bmos_thoughts(
-           user_id 
+            user_id
         )  # fetch BMO's thoughts using the memory system
         # build the prompt with the fetched thoughts and the user input
-            # {thoughts["user_context"]}
+        # {thoughts["user_context"]}
         instructions = f"""
             You are BMO, respond naturally to the user based on your current internal state and the context of the conversation.
             {thoughts["user_context"]}
 
             [YOUR INTERNAL CONTEXT]
-            {thoughts.get('user_context', 'You are talking a new friend.')}
+            {thoughts.get("user_context", "You are talking a new friend.")}
 
             [CORE MEMORIES]
             -{thoughts["core_memories"][0] if len(thoughts["core_memories"]) > 0 else "Nothing special"}

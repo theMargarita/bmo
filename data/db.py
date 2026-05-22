@@ -74,7 +74,7 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
 
     # Execute the SQL commands to create the tables
     cursor.executescript(create_table_query)
-    
+
     # Commit the transaction
     connection.commit()
     print("Tables created successfully")
