@@ -57,5 +57,7 @@ jobs:
 
       # 7. Run tests
       - name: Run tests
+        env:
+          PYTHONPATH: .
         run: |
           pytest tests/ -v
