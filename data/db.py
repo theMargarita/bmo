@@ -12,7 +12,7 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,       
             source TEXT,                  
-            importance INTEGER DEFAULT 0, 
+            importance INTEGER DEFAULT 3, 
             -- vision_data BLOB,           
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
         );
@@ -67,7 +67,8 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         CREATE TABLE IF NOT EXISTS bmo_state (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             description TEXT,                
-            status TEXT,                     
+            status TEXT,  
+            -- priority INTEGER DEFAULT 3,                   
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """
