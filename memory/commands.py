@@ -99,6 +99,7 @@ def run_bmo():
         if user_input.lower().startswith("mood "):
             new_mood = user_input[5:].strip()
             prompt_builder.set_mood(new_mood)
+            bmo_memory.update_bmo_state(f"Mood changed to {new_mood}")
             print_bmo(f"Mood changed to {new_mood}.")
             continue
 
