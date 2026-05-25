@@ -131,14 +131,15 @@ class BMOsMemory:
     # Saving 'core' memories
     def save(self, content: str, source: str, importance: int = 0, tags: list = None):
         try:
+            chroma_id = str(uuid.uuid4())
             if tags:
-                chroma_id = str(uuid.uuid4())
                 source = f"{source} | tags: {','.join(tags)}"
+
             with sqlite3.connect(self.db_path) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "INSERT INTO memories (content, source, importance) VALUES (?,?,?)",
-                    (content, source, importance),
+                    "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?)",
+                    (content, source, importance, chroma_id),
                 )
                 connection.commit()
 
@@ -155,7 +156,7 @@ class BMOsMemory:
             print(f"Error saving memory: {e}")
 
     # -----------user table functions-----------
-    def update_user_relation(self, user_id, new_fact, bmo_perception_json):
+    def update_user_relation(self, user_id: int, new_fact: str, bmo_perception_json):
         try:
             with sqlite3.connect(self.db_path) as connection:
                 cursor = connection.cursor()
@@ -184,38 +185,50 @@ class BMOsMemory:
             print(f"Could not update user: {e}")
 
     # --------bmo state functions------------
-    # def get_bmo_state(self):
-    #     with sqlite3.connect(self.db_path) as connection:
-    #         cursor = connection.cursor()
-    #         cursor.execute(
-    #             "SELECT description, status FROM bmo_state ORDER BY last_updated DESC LIMIT 1"
-    #         )
-    #         return cursor.fetchone()
+    def get_bmo_state(self):
+        try:
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "SELECT event, mood, detail, status FROM bmo_state ORDER BY last_updated DESC LIMIT 1"
+                )
+                row =  cursor.fetchone()
+                if row:
+                    return {
+                        "event": row[0],
+                        "status": row[1],
+                        "mood": row[2],
+                        "detail": row[3]
+                    }
+        except sqlite3.Error as e:
+            print(f"Could not fetch BMOs status: {e}")
+            return None
         
-    def update_bmo_state(self, description, status):
+    def update_bmo_state(self, event: str, status: str, mood: str = None, detail: str = None):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO bmo_state (description, status) VALUES (?,?)",
+                    "INSERT INTO bmo_state (event, status, mood, detail) VALUES (?,?,?,?)",
                     (
-                        description,
-                        status,
+                        event,
+                        detail,
+                        mood, 
+                        status
                     ),
                 )
-
                 conn.commit()
         except sqlite3.Error as e:
             print(f"Could not update BMO's status: {e}")
 
-    # def get_conversation_history(self, conversation_id):
-    #     with sqlite3.connect(self.db_path) as connection:
-    #         cursor = connection.cursor()
-    #         cursor.execute(
-    #             "SELECT role_id, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
-    #             (conversation_id,),
-    #         )
-    #         return cursor.fetchall()
+    def get_conversation_history(self, conversation_id):
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT role_id, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
+                (conversation_id,),
+            )
+            return cursor.fetchall()
 
     def get_recent(self, limit: int = 5) -> list:
         try:
