@@ -1,9 +1,13 @@
 import json
 import os
 import sqlite3
-
+import uuid
 from brain.llm import LLMClient
+import chromadb
+from chromadb.utils import embedding_functions
 
+#small offline emmbedding model
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 class BMOsMemory:
     def __init__(self, db_path="data/bmo_memory.db"):
@@ -12,6 +16,22 @@ class BMOsMemory:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         # Instantiate the LLM client for consolidation
         self.llm = LLMClient()
+
+        ##chroa setup 
+        self.chroma = chromadb.PersistentClient(path="data/chroma")
+
+        #embeddings function converts text -> verctors 
+        self.embedding_fn = (
+            embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name=EMBEDDING_MODEL
+            )
+        )
+
+        self.collection = self.chroma.get_or_create_collection(
+            name="bmo_memories",
+            embedding_function=self.embedding_fn,
+            metadata={"hnsw:space": "cosine"},
+        )
 
     def seed_database(self, owner_name="Creator"):
         with sqlite3.connect(self.db_path) as conn:
@@ -44,10 +64,11 @@ class BMOsMemory:
     # Count memories
     def count(self) -> int:
         try:
-            with sqlite3.connect(self.db_path) as connection:
-                cursor = connection.cursor()
-                cursor.execute("SELECT COUNT(*) FROM memories")
-                return cursor.fetchone()[0]
+            # with sqlite3.connect(self.db_path) as connection:
+            #     cursor = connection.cursor()
+            #     cursor.execute("SELECT COUNT(*) FROM memories")
+            #     return cursor.fetchone()[0]
+            return self.collection.count()
         except sqlite3.Error as e:
             print(f"Error occurred while counting memories: {e}")
             return 0
@@ -111,6 +132,7 @@ class BMOsMemory:
     def save(self, content: str, source: str, importance: int = 0, tags: list = None):
         try:
             if tags:
+                chroma_id = str(uuid.uuid4())
                 source = f"{source} | tags: {','.join(tags)}"
             with sqlite3.connect(self.db_path) as connection:
                 cursor = connection.cursor()
@@ -119,6 +141,16 @@ class BMOsMemory:
                     (content, source, importance),
                 )
                 connection.commit()
+
+                #save vectors to chromadb
+                self.collection.add(
+                    documents=[content],
+                    ids=[chroma_id],
+                    metadatas=[{
+                        "source": source,
+                        "importance": importance
+                    }]
+                )
         except sqlite3.Error as e:
             print(f"Error saving memory: {e}")
 
@@ -342,3 +374,14 @@ class BMOsMemory:
                 conn.commit()
         except sqlite3.Error as e:
             print(f"Could not update BMO's status: {e}")
+
+    def get_or_create_user(self, name):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM users WHERE name = ?", (name,))
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+            cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
+            conn.commit()
+            return cursor.lastrowid
