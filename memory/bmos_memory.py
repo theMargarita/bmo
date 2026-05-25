@@ -184,52 +184,87 @@ class BMOsMemory:
             print(f"Could not update user: {e}")
 
     # --------bmo state functions------------
-    def get_bmo_state(self):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                "SELECT description, status FROM bmo_state ORDER BY last_updated DESC LIMIT 1"
-            )
-            return cursor.fetchone()
+    # def get_bmo_state(self):
+    #     with sqlite3.connect(self.db_path) as connection:
+    #         cursor = connection.cursor()
+    #         cursor.execute(
+    #             "SELECT description, status FROM bmo_state ORDER BY last_updated DESC LIMIT 1"
+    #         )
+    #         return cursor.fetchone()
+        
+    def update_bmo_state(self, description, status):
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO bmo_state (description, status) VALUES (?,?)",
+                    (
+                        description,
+                        status,
+                    ),
+                )
 
-    def get_conversation_history(self, conversation_id):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                "SELECT role_id, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
-                (conversation_id,),
-            )
-            return cursor.fetchall()
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Could not update BMO's status: {e}")
+
+    # def get_conversation_history(self, conversation_id):
+    #     with sqlite3.connect(self.db_path) as connection:
+    #         cursor = connection.cursor()
+    #         cursor.execute(
+    #             "SELECT role_id, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
+    #             (conversation_id,),
+    #         )
+    #         return cursor.fetchall()
 
     def get_recent(self, limit: int = 5) -> list:
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                "SELECT importance, content FROM memories ORDER BY created_at DESC LIMIT ?",
-                (limit,),
-            )
-            return [
-                {"importance": row[0], "content": row[1]} for row in cursor.fetchall()
-            ]
+        try:
+            with sqlite3.connect(self.db_path) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
+                cursor.execute(
+                    "SELECT importance, content FROM memories ORDER BY created_at DESC LIMIT ?",
+                    (limit,),
+                )
+                return [
+                    {"importance": row[0], "content": row[1]} for row in cursor.fetchall()
+                ]
+        except sqlite3.Error as e:
+            print(f"Could not get recent events: {e}")
+            return []
 
     # Searches memory table for keywords longer than 4 letters
-    def search_context(self, query: str) -> list:
-        words = [w for w in query.lower().split() if len(w) > 4]
-        result = []
-        if not words:
-            return result
+    #now this will be used for chromadb 
+    def search_context(self, query: str, n:int = 3) -> list[str]:
+        if self.collection.count() == 0:
+            return []
+        # words = [w for w in query.lower().split() if len(w) > 4]
+        # result = []
+        # if not words:
+        #     return result
+        try:
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=min(n, self.collection.count())
+            )
 
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            for w in words:
-                cursor.execute(
-                    "SELECT content FROM memories WHERE content LIKE ? LIMIT 1",
-                    (f"%{w}%",),
-                )
-                row = cursor.fetchone()
-                if row and row[0] not in result:
-                    result.append(row[0])
-        return result
+            if results and results ["documents"] and results["documents"][0]:
+                return results["documents"][0] #
+            # with sqlite3.connect(self.db_path) as connection:
+            #     cursor = connection.cursor()
+            #     for w in words:
+            #         cursor.execute(
+            #             "SELECT content FROM memories WHERE content LIKE ? LIMIT 1",
+            #             (f"%{w}%",),
+            #         )
+            #         row = cursor.fetchone()
+            #         if row and row[0] not in result:
+            #             result.append(row[0])
+            # return result
+            return []
+        except Exception as e:
+            print(f"[BMO memory] Search error: {e}")
+            return []
 
     # -----------fetching BMO's thoughts for response generation------
     def fetch_bmos_thoughts(self, user_id):
@@ -270,15 +305,6 @@ class BMOsMemory:
 
         return bmo_thoughts
 
-    def create_user(self, name, facts="", bmo_perception="{}"):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            # Fixed column syntax and commas
-            cursor.execute(
-                "INSERT INTO users (name, facts, bmo_perception) VALUES (?,?,?)",
-                (name, facts, bmo_perception),
-            )
-            connection.commit()
 
     def consolidate_bmo(self, user_id, conversation_id, recent_messages):
         with sqlite3.connect(self.db_path) as c:
@@ -359,21 +385,7 @@ class BMOsMemory:
             except json.JSONDecodeError:
                 print("Oops! BMO's thoughts were too chaotic to parse this time..")
 
-    def update_bmo_state(self, description, status):
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO bmo_state (description, status) VALUES (?,?)",
-                    (
-                        description,
-                        status,
-                    ),
-                )
 
-                conn.commit()
-        except sqlite3.Error as e:
-            print(f"Could not update BMO's status: {e}")
 
     def get_or_create_user(self, name):
         with sqlite3.connect(self.db_path) as conn:
@@ -385,3 +397,13 @@ class BMOsMemory:
             cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
             conn.commit()
             return cursor.lastrowid
+
+    def create_user(self, name, facts="", bmo_perception="{}"):
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.cursor()
+            # Fixed column syntax and commas
+            cursor.execute(
+                "INSERT INTO users (name, facts, bmo_perception) VALUES (?,?,?)",
+                (name, facts, bmo_perception),
+            )
+            connection.commit()
