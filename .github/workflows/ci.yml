@@ -53,6 +53,7 @@ jobs:
         run: |
           ruff check .
           ruff format . --check
+          ruff format
           ruff check . --fix
 
       # 7. Run tests

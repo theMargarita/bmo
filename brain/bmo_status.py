@@ -4,12 +4,13 @@ from enum import Enum
 
 class BMOStatus(Enum):
     IDLE = "idle"
-    LISTENING = "listening"     # microphone active 
-    THINKING = "thinking"       # waiting for LLM response
-    SPEAKING = "speaking"       # TTS playing (speaker)
+    LISTENING = "listening"  # microphone active
+    THINKING = "thinking"  # waiting for LLM response
+    SPEAKING = "speaking"  # TTS playing (speaker)
     ERROR = "error"
     STARTING = "starting"
     SHUTTING_DOWN = "shutting_down"
+
 
 LOGGABLE_EVENTS = {
     "session_start",
@@ -21,7 +22,8 @@ LOGGABLE_EVENTS = {
     "low_memory",
 }
 
-#moods
+
+# moods
 class Moods(Enum):
     MOTIVATED = "motivated"
     PRODUCTIVE = "productive"
@@ -34,15 +36,18 @@ class Moods(Enum):
     NEUTRAL = "neutral"
 
     possible_moods = ["happy", "cranky", "sleepy", "excited", "curious", "thoughtful"]
+
+
 weekday_moods = {
-    0: "motivated",    # Monday
-    1: "productive",   # Tuesday
-    2: "curious",      # Wednesday
-    3: "thoughtful",   # Thursday
-    4: "excited",      # Friday
-    5: "playful",      # Saturday
-    6: "sleepy",       # Sunday
+    0: "motivated",  # Monday
+    1: "productive",  # Tuesday
+    2: "curious",  # Wednesday
+    3: "thoughtful",  # Thursday
+    4: "excited",  # Friday
+    5: "playful",  # Saturday
+    6: "sleepy",  # Sunday
 }
+
 
 class StatusManager:
     def __init__(self, db_path: str = "data/bmo_memory.db", mood: str = Moods.NEUTRAL):
@@ -67,7 +72,7 @@ class StatusManager:
             BMOStatus.SPEAKING,
         )
 
-#for future when connected to a hardware and I want to get recent error 
+    # for future when connected to a hardware and I want to get recent error
     def get_errors(self, limit: int = 10) -> list[dict]:
         try:
             with sqlite3.connect(self._db_path) as conn:
