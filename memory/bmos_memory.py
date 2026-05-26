@@ -6,8 +6,9 @@ from brain.llm import LLMClient
 import chromadb
 from chromadb.utils import embedding_functions
 
-#small offline emmbedding model
+# small offline emmbedding model
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+
 
 class BMOsMemory:
     def __init__(self, db_path="data/bmo_memory.db"):
@@ -17,14 +18,12 @@ class BMOsMemory:
         # Instantiate the LLM client for consolidation
         self.llm = LLMClient()
 
-        ##chroa setup 
+        ##chroa setup
         self.chroma = chromadb.PersistentClient(path="data/chroma")
 
-        #embeddings function converts text -> verctors 
-        self.embedding_fn = (
-            embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name=EMBEDDING_MODEL
-            )
+        # embeddings function converts text -> verctors
+        self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name=EMBEDDING_MODEL
         )
 
         self.collection = self.chroma.get_or_create_collection(
@@ -143,14 +142,11 @@ class BMOsMemory:
                 )
                 connection.commit()
 
-                #save vectors to chromadb
+                # save vectors to chromadb
                 self.collection.add(
                     documents=[content],
                     ids=[chroma_id],
-                    metadatas=[{
-                        "source": source,
-                        "importance": importance
-                    }]
+                    metadatas=[{"source": source, "importance": importance}],
                 )
         except sqlite3.Error as e:
             print(f"Error saving memory: {e}")
@@ -192,30 +188,27 @@ class BMOsMemory:
                 cursor.execute(
                     "SELECT event,status, mood, detail FROM bmo_state ORDER BY last_updated DESC LIMIT 1"
                 )
-                row =  cursor.fetchone()
+                row = cursor.fetchone()
                 if row:
                     return {
                         "event": row[0],
                         "status": row[1],
                         "mood": row[2],
-                        "detail": row[3]
+                        "detail": row[3],
                     }
         except sqlite3.Error as e:
             print(f"Could not fetch BMOs status: {e}")
             return None
-        
-    def update_bmo_state(self, event: str, status: str, mood: str = None, detail: str = None):
+
+    def update_bmo_state(
+        self, event: str, status: str, mood: str = None, detail: str = None
+    ):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "INSERT INTO bmo_state (event, status, mood, detail) VALUES (?,?,?,?)",
-                    (
-                        event,
-                        status,
-                        mood, 
-                        detail
-                    ),
+                    (event, status, mood, detail),
                 )
                 conn.commit()
         except sqlite3.Error as e:
@@ -240,15 +233,16 @@ class BMOsMemory:
                     (limit,),
                 )
                 return [
-                    {"importance": row[0], "content": row[1]} for row in cursor.fetchall()
+                    {"importance": row[0], "content": row[1]}
+                    for row in cursor.fetchall()
                 ]
         except sqlite3.Error as e:
             print(f"Could not get recent events: {e}")
             return []
 
     # Searches memory table for keywords longer than 4 letters
-    #now this will be used for chromadb 
-    def search_context(self, query: str, n:int = 3) -> list[str]:
+    # now this will be used for chromadb
+    def search_context(self, query: str, n: int = 3) -> list[str]:
         if self.collection.count() == 0:
             return []
         # words = [w for w in query.lower().split() if len(w) > 4]
@@ -257,12 +251,15 @@ class BMOsMemory:
         #     return result
         try:
             results = self.collection.query(
-                query_texts=[query],
-                n_results=min(n, self.collection.count())
+                query_texts=[query], n_results=min(n, self.collection.count())
             )
 
-            if results and results.get("documents") and len(results["documents"][0]) > 0:
-                return results["documents"][0] 
+            if (
+                results
+                and results.get("documents")
+                and len(results["documents"][0]) > 0
+            ):
+                return results["documents"][0]
             # with sqlite3.connect(self.db_path) as connection:
             #     cursor = connection.cursor()
             #     for w in words:
@@ -318,7 +315,6 @@ class BMOsMemory:
 
         return bmo_thoughts
 
-
     def consolidate_bmo(self, user_id, conversation_id, recent_messages):
         with sqlite3.connect(self.db_path) as c:
             cursor = c.cursor()
@@ -361,7 +357,13 @@ class BMOsMemory:
 
             try:
                 # Strip markdown fences if the LLM includes them
-                clean_response = llm_response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+                clean_response = (
+                    llm_response.strip()
+                    .removeprefix("```json")
+                    .removeprefix("```")
+                    .removesuffix("```")
+                    .strip()
+                )
                 new_data = json.loads(clean_response)
                 #
                 new_facts = new_data.get("updated_facts")
@@ -416,17 +418,24 @@ class BMOsMemory:
                 return row[0]
 
             guest_role_id = self.get_role_id("Guest")
-            initial_perception = json.dumps({
-                "connection_to_owner": "unknown",
-                "bmo_feelings_toward_them": "neutral, just met",
-                "trust_level": 3,
-                "inside_jokes": []
-            })
+            initial_perception = json.dumps(
+                {
+                    "connection_to_owner": "unknown",
+                    "bmo_feelings_toward_them": "neutral, just met",
+                    "trust_level": 3,
+                    "inside_jokes": [],
+                }
+            )
 
             cursor.execute(
                 """INSERT INTO users (name, facts, role_id, bmo_perception) 
                 VALUES (?, ?, ?, ?)""",
-                (name, "A new person BMO has just met.", guest_role_id, initial_perception)
+                (
+                    name,
+                    "A new person BMO has just met.",
+                    guest_role_id,
+                    initial_perception,
+                ),
             )
             conn.commit()
             return cursor.lastrowid
