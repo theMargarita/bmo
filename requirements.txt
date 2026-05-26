@@ -6,10 +6,8 @@ python-dotenv>=1.0.0
 pytest>=8.0.0
 ruff>=0.1.0
 pre-commit>=3.7.0
-
-# Added later when building long-term memory:
-# chromadb>=0.5.0
-# sentence-transformers>=3.0.0
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
 
 # Added later when building voice:
 # openai-whisper

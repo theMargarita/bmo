@@ -35,6 +35,16 @@ def run_bmo():
         print("Make sure Ollama is running and try again")
         sys.exit(1)
 
+    # ask who is speaking
+    bmo_memory = BMOsMemory()
+    bmo_memory.seed_database()
+
+    name = input("Who am I speaking to? ").strip()
+    if not name:
+        name = "Stranger"
+
+    user_id = bmo_memory.get_or_create_user(name)
+
     print(f"\nModel : {llm_client.model}")
     print(f"Mood  : {prompt_builder.identity_manager.get_bmo_context()}")
     print(
@@ -45,15 +55,17 @@ def run_bmo():
     # Opening line from BMO
     opening_prompt = [
         {"role": "system", "content": get_system_prompt()},
+        {
+            "role": "user",
+            "content": f"You are talking to {name}. Greet them appropiately based on your relationship.",
+        },
     ]
     opening = llm_client.chat(opening_prompt)
     print_bmo(opening)
 
     # Instantiate database once and use it everywhere
-    bmo_memory = BMOsMemory()
-    bmo_memory.seed_database()
     conversation_id = bmo_memory.save_conversations(
-        user_id=1, message="Session started."
+        user_id=user_id, message="Session started."
     )
 
     while True:
@@ -79,7 +91,9 @@ def run_bmo():
 
             # Run the automated database update!
             bmo_memory.consolidate_bmo(
-                user_id=1, conversation_id=conversation_id, recent_messages=history_text
+                user_id=user_id,
+                conversation_id=conversation_id,
+                recent_messages=history_text,
             )
 
             randomize = [
@@ -99,6 +113,14 @@ def run_bmo():
         if user_input.lower().startswith("mood "):
             new_mood = user_input[5:].strip()
             prompt_builder.set_mood(new_mood)
+            bmo_memory.update_bmo_state(
+                event="start_session",
+                status="excited",
+                mood=new_mood,
+                detail="Connected with Creator",
+            )
+            relevant_memories = bmo_memory.search_context(user_input)
+            bmo_thought = bmo_memory.fetch_bmos_thoughts(user_id=user_id)
             print_bmo(f"Mood changed to {new_mood}.")
             continue
 
@@ -115,7 +137,7 @@ def run_bmo():
         relevant_memories = bmo_memory.search_context(user_input)
 
         # 3. Pull BMO's current feelings/perception from database
-        bmo_thought = bmo_memory.fetch_bmos_thoughts(user_id=1)
+        bmo_thought = bmo_memory.fetch_bmos_thoughts(user_id=user_id)
 
         # 4. Update short-term chat tracking
         short_term_memory.add("user", user_input)
@@ -131,8 +153,8 @@ def run_bmo():
         response = llm_client.chat(messages)
 
         # 7. Save BMO's answer to short-term memory AND the database!
-        short_term_memory.add("assistant", response)
-        bmo_memory.save_chat_message(conversation_id, "assistant", response)
+        short_term_memory.add("BMO", response)
+        bmo_memory.save_chat_message(conversation_id, "BMO", response)
 
         # 8. Output to screen
         print_bmo(response)

@@ -11,8 +11,9 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         CREATE TABLE IF NOT EXISTS memories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,       
-            source TEXT,                  
-            importance INTEGER DEFAULT 0, 
+            source TEXT,  
+            chroma_id TEXT UNIQUE,             
+            importance INTEGER DEFAULT 2, 
             -- vision_data BLOB,           
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
         );
@@ -66,8 +67,10 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         -- Table: bmo_state
         CREATE TABLE IF NOT EXISTS bmo_state (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            description TEXT,                
-            status TEXT,                     
+            event TEXT NOT NULL, --what happend: start_session, error, crach etc
+            status TEXT NOT NULL, --how bo should 'feel' in the terms it can 'feel' 
+            mood TEXT, --good to know mood
+            detail TEXT, --extra info if crash etc
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """
