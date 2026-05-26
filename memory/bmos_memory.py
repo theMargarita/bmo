@@ -138,7 +138,7 @@ class BMOsMemory:
             with sqlite3.connect(self.db_path) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?)",
+                    "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?,?)",
                     (content, source, importance, chroma_id),
                 )
                 connection.commit()
@@ -190,7 +190,7 @@ class BMOsMemory:
             with sqlite3.connect(self.db_path) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "SELECT event, mood, detail, status FROM bmo_state ORDER BY last_updated DESC LIMIT 1"
+                    "SELECT event,status, mood, detail FROM bmo_state ORDER BY last_updated DESC LIMIT 1"
                 )
                 row =  cursor.fetchone()
                 if row:
@@ -212,9 +212,9 @@ class BMOsMemory:
                     "INSERT INTO bmo_state (event, status, mood, detail) VALUES (?,?,?,?)",
                     (
                         event,
-                        detail,
+                        status,
                         mood, 
-                        status
+                        detail
                     ),
                 )
                 conn.commit()
@@ -261,8 +261,8 @@ class BMOsMemory:
                 n_results=min(n, self.collection.count())
             )
 
-            if results and results ["documents"] and results["documents"][0]:
-                return results["documents"][0] #
+            if results and results.get("documents") and len(results["documents"][0]) > 0:
+                return results["documents"][0] 
             # with sqlite3.connect(self.db_path) as connection:
             #     cursor = connection.cursor()
             #     for w in words:
@@ -360,7 +360,9 @@ class BMOsMemory:
             llm_response = self.llm.chat(messages)
 
             try:
-                new_data = json.loads(llm_response)
+                # Strip markdown fences if the LLM includes them
+                clean_response = llm_response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+                new_data = json.loads(clean_response)
                 #
                 new_facts = new_data.get("updated_facts")
                 new_perception_str = json.dumps(new_data.get("updated_perception"))
@@ -398,18 +400,47 @@ class BMOsMemory:
             except json.JSONDecodeError:
                 print("Oops! BMO's thoughts were too chaotic to parse this time..")
 
+    def get_role_id(self, role_name: str) -> int | None:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM roles WHERE name = ?", (role_name,))
+            row = cursor.fetchone()
+            return row[0] if row else None
 
-
-    def get_or_create_user(self, name):
+    def get_or_create_user(self, name: str) -> int:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM users WHERE name = ?", (name,))
             row = cursor.fetchone()
             if row:
                 return row[0]
-            cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
+
+            guest_role_id = self.get_role_id("Guest")
+            initial_perception = json.dumps({
+                "connection_to_owner": "unknown",
+                "bmo_feelings_toward_them": "neutral, just met",
+                "trust_level": 3,
+                "inside_jokes": []
+            })
+
+            cursor.execute(
+                """INSERT INTO users (name, facts, role_id, bmo_perception) 
+                VALUES (?, ?, ?, ?)""",
+                (name, "A new person BMO has just met.", guest_role_id, initial_perception)
+            )
             conn.commit()
             return cursor.lastrowid
+
+    # def get_or_create_user(self, name):
+    #     with sqlite3.connect(self.db_path) as conn:
+    #         cursor = conn.cursor()
+    #         cursor.execute("SELECT id FROM users WHERE name = ?", (name,))
+    #         row = cursor.fetchone()
+    #         if row:
+    #             return row[0]
+    #         cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
+    #         conn.commit()
+    #         return cursor.lastrowid
 
     def create_user(self, name, facts="", bmo_perception="{}"):
         with sqlite3.connect(self.db_path) as connection:
