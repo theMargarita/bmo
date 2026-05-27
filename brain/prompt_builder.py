@@ -15,16 +15,16 @@ class PromptBuilder:
     def __init__(self, identity_manager: Identity):
         self.identity_manager = identity_manager
 
-    def build(self, history, memories, bmo_thought, game_context: str = None) -> list[dict]:
-        messages = []  
+    def build(
+        self, history, memories, bmo_thought, game_context: str = None
+    ) -> list[dict]:
+        messages = []
         # core system prompt with personality and mood
-        messages.append(
-            {"role": "system", "content": get_system_prompt()}
-        )  
-            
+        messages.append({"role": "system", "content": get_system_prompt()})
+
         if game_context:
             messages.append({"role": "system", "content": game_context})
-        
+
         bmo_context = self.identity_manager.get_bmo_context()
         if bmo_context:
             messages.append(
@@ -47,20 +47,18 @@ class PromptBuilder:
             messages.append({"role": "system", "content": memory_block})
 
         # else
-        messages.extend(
-            history[-MAX_HISTORY:]
-        ) 
+        messages.extend(history[-MAX_HISTORY:])
         return messages
 
     def set_mood(self, mood: str):
         self.identity_manager.set_mood(mood)
 
     # -------fetching BMO's internal state from the database------
-    def build_with_personalities(self, user_input, user_id, memory_system, history, game_context:str = None):
+    def build_with_personalities(
+        self, user_input, user_id, memory_system, history, game_context: str = None
+    ):
         memory_system = BMOsMemory()
-        thoughts = memory_system.fetch_bmos_thoughts(
-            user_id
-        )  
+        thoughts = memory_system.fetch_bmos_thoughts(user_id)
         instructions = f"""
             Your name is BMO and you are inspired by BMO from Adventure Time. 
             Respond naturally to the user based on your current internal state and the context of the conversation.
@@ -82,7 +80,6 @@ class PromptBuilder:
 """
         if game_context:
             instructions += f"\n\n[URGENT GAME MODE ACTIVE]\n{game_context}\n"
-        
 
         messages = [
             {"role": "system", "content": instructions},

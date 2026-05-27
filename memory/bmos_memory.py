@@ -42,37 +42,33 @@ class BMOsMemory:
                 cursor.execute(
                     "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
                     (
-                        'Creator', 
-                        'The creator of BMO', 
-                        "Sees BMO as her baby, because it is her (Margo's) first ever made machine."
-                    )
+                        "Creator",
+                        "The creator of BMO",
+                        "Sees BMO as her baby, because it is her (Margo's) first ever made machine.",
+                    ),
                 )
-                
+
                 cursor.execute(
                     "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
                     (
-                        'Acquaintance', 
-                        'A familiar face, or a casual contact', 
-                        'Highlighting someone you know casually, but not on an intimate level'
-                    )
+                        "Acquaintance",
+                        "A familiar face, or a casual contact",
+                        "Highlighting someone you know casually, but not on an intimate level",
+                    ),
                 )
-                
+
                 cursor.execute(
                     "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
                     (
-                        'Friend', 
-                        'Be there for each other', 
-                        'Capturing personality and shared history'
-                    )
+                        "Friend",
+                        "Be there for each other",
+                        "Capturing personality and shared history",
+                    ),
                 )
-                
+
                 cursor.execute(
                     "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
-                    (
-                        'Partner-in-crime', 
-                        'Serves as the twin', 
-                        'Chaos and fun'
-                    )
+                    ("Partner-in-crime", "Serves as the twin", "Chaos and fun"),
                 )
 
                 conn.commit()
@@ -99,9 +95,14 @@ class BMOsMemory:
     #         return 0
 
     # ---start session-----
-    #removed equal to one in user_id - lets tests what will happend 
+    # removed equal to one in user_id - lets tests what will happend
     def start_session(self, mood: str, user_id: int = 1) -> int:
-        self.update_bmo_state(event="start_session", status="active", mood=mood, detail="User initiated chat.")
+        self.update_bmo_state(
+            event="start_session",
+            status="active",
+            mood=mood,
+            detail="User initiated chat.",
+        )
         return self.save_conversations(
             user_id, f"Session started.\n BMO's mood: {mood}"
         )
@@ -377,14 +378,14 @@ class BMOsMemory:
                         ),
                     )
                     conn.commit()
-                    #ending session - start processing new memory
+                    # ending session - start processing new memory
                     self.end_session(conversation_id, summary)
 
                     self.update_bmo_state(
                         event="end_session_consolidation",
                         status="resting",
                         mood=valence,
-                        detail=f"Proccessed session summary: {summary}"
+                        detail=f"Proccessed session summary: {summary}",
                     )
 
                     for memory_text in core_memories:
@@ -405,7 +406,7 @@ class BMOsMemory:
             row = cursor.fetchone()
             return row[0] if row else None
 
-#to avoid duplicates
+    # to avoid duplicates
     def get_or_create_user(self, name: str) -> int:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()

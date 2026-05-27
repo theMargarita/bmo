@@ -7,11 +7,14 @@ from memory.identity import Identity
 from brain.personality import get_system_prompt
 from memory.bmos_memory import BMOsMemory
 
+
 def print_bmo(text: str):
     print(f"\n[BMO]: {text}")
 
+
 def print_separator():
     print("-" * 50)
+
 
 def run_bmo():
     print_separator()
@@ -40,7 +43,7 @@ def run_bmo():
 
     last_state = bmo_memory.get_bmo_state()
     baseline_mood = last_state["mood"] if last_state else "Normal"
-    
+
     # Initialize session state records smoothly
     conversation_id = bmo_memory.start_session(mood=baseline_mood, user_id=user_id)
 
@@ -71,7 +74,9 @@ def run_bmo():
         if user_input.lower() == "quit":
             print("\n[System] BMO is processing today's experiences...")
             recent_history = short_term_memory.get_history()
-            history_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent_history])
+            history_text = "\n".join(
+                [f"{m['role']}: {m['content']}" for m in recent_history]
+            )
 
             # This triggers consolidation and logs the conversation's emotional valence into bmo_state
             bmo_memory.consolidate_bmo(
@@ -80,7 +85,12 @@ def run_bmo():
                 recent_messages=history_text,
             )
 
-            randomize = ["Goodbye!", "See you later!", "Take care!", "Catch you later alligator!"]
+            randomize = [
+                "Goodbye!",
+                "See you later!",
+                "Take care!",
+                "Catch you later alligator!",
+            ]
             print_bmo(random.choice(randomize))
             break
 
@@ -96,7 +106,7 @@ def run_bmo():
                 event="manual_mood_shift",
                 status="altered",
                 mood=new_mood,
-                detail="User manual intervention."
+                detail="User manual intervention.",
             )
             print_bmo(f"Mood changed to {new_mood}.")
             continue
@@ -124,6 +134,7 @@ def run_bmo():
         short_term_memory.add("BMO", response)
         bmo_memory.save_chat_message(conversation_id, "BMO", response)
         print_bmo(response)
+
 
 if __name__ == "__main__":
     run_bmo()
