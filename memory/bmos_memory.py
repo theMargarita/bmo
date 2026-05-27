@@ -7,28 +7,29 @@ import chromadb
 from chromadb.utils import embedding_functions
 
 # small offline emmbedding model
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+# EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 
 class BMOsMemory:
     def __init__(self, db_path="data/bmo_memory.db"):
         self.db_path = db_path
-        # Ensure directory exists before we try to access it
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        # Instantiate the LLM client for consolidation
         self.llm = LLMClient()
 
-        ##chroa setup
+        ##chroma setup
         self.chroma = chromadb.PersistentClient(path="data/chroma")
 
         # embeddings function converts text -> verctors
-        self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=EMBEDDING_MODEL
+        # self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+        #     model_name=EMBEDDING_MODEL
+        # )'
+        self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(
+            model_name="nomic-embed-text"
         )
 
         self.collection = self.chroma.get_or_create_collection(
             name="bmo_memories",
-            embedding_function=self.embedding_fn,
+            embedding_function=self.embedding_fu,
             metadata={"hnsw:space": "cosine"},
         )
 
@@ -39,14 +40,39 @@ class BMOsMemory:
             cursor.execute("SELECT COUNT(*) FROM roles")
             if cursor.fetchone()[0] == 0:
                 cursor.execute(
-                    "INSERT INTO roles (name, role_description) VALUES ('Owner', '{\"access\": \"absolute\"}')"
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    (
+                        "Creator",
+                        "The creator of BMO",
+                        "Sees BMO as her baby, because it is her (Margo's) first ever made machine.",
+                    ),
                 )
+
                 cursor.execute(
-                    "INSERT INTO roles (name, role_description) VALUES ('Guest', '{\"access\": \"limited\"}')"
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    (
+                        "Acquaintance",
+                        "A familiar face, or a casual contact",
+                        "Highlighting someone you know casually, but not on an intimate level",
+                    ),
+                )
+
+                cursor.execute(
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    (
+                        "Friend",
+                        "Be there for each other",
+                        "Capturing personality and shared history",
+                    ),
+                )
+
+                cursor.execute(
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    ("Partner-in-crime", "Serves as the twin", "Chaos and fun"),
                 )
 
                 conn.commit()
-                print("[Databse] Default roles injected")
+                print("[Database] Default roles injected")
             # check if default user exists, if not - create user ID
             cursor.execute("SELECT COUNT(*) FROM users")
             if cursor.fetchone()[0] == 0:
@@ -61,20 +87,22 @@ class BMOsMemory:
                 print(f"[Database] Default user '{owner_name} created as User ID 1.")
 
     # Count memories
-    def count(self) -> int:
-        try:
-            # with sqlite3.connect(self.db_path) as connection:
-            #     cursor = connection.cursor()
-            #     cursor.execute("SELECT COUNT(*) FROM memories")
-            #     return cursor.fetchone()[0]
-            return self.collection.count()
-        except sqlite3.Error as e:
-            print(f"Error occurred while counting memories: {e}")
-            return 0
+    # def count(self) -> int:
+    #     try:
+    #         return self.collection.count()
+    #     except sqlite3.Error as e:
+    #         print(f"Error occurred while counting memories: {e}")
+    #         return 0
 
     # ---start session-----
+    # removed equal to one in user_id - lets tests what will happend
     def start_session(self, mood: str, user_id: int = 1) -> int:
-        # Corrected method name and slash direction
+        self.update_bmo_state(
+            event="start_session",
+            status="active",
+            mood=mood,
+            detail="User initiated chat.",
+        )
         return self.save_conversations(
             user_id, f"Session started.\n BMO's mood: {mood}"
         )
@@ -95,13 +123,13 @@ class BMOsMemory:
             return None
 
     # ------message table functions--------
-    def save_chat_message(self, conversation_id, role, content):
+    def save_chat_message(self, conversation_id, role_id, content):
         try:
             with sqlite3.connect(self.db_path) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
                     "INSERT INTO messages (conversation_id, role_id, content) VALUES (?,?,?)",
-                    (conversation_id, role, content),
+                    (conversation_id, role_id, content),
                 )
                 connection.commit()
         except sqlite3.Error as e:
@@ -223,32 +251,11 @@ class BMOsMemory:
             )
             return cursor.fetchall()
 
-    def get_recent(self, limit: int = 5) -> list:
-        try:
-            with sqlite3.connect(self.db_path) as connection:
-                connection.row_factory = sqlite3.Row
-                cursor = connection.cursor()
-                cursor.execute(
-                    "SELECT importance, content FROM memories ORDER BY created_at DESC LIMIT ?",
-                    (limit,),
-                )
-                return [
-                    {"importance": row[0], "content": row[1]}
-                    for row in cursor.fetchall()
-                ]
-        except sqlite3.Error as e:
-            print(f"Could not get recent events: {e}")
-            return []
-
-    # Searches memory table for keywords longer than 4 letters
     # now this will be used for chromadb
     def search_context(self, query: str, n: int = 3) -> list[str]:
         if self.collection.count() == 0:
             return []
-        # words = [w for w in query.lower().split() if len(w) > 4]
-        # result = []
-        # if not words:
-        #     return result
+
         try:
             results = self.collection.query(
                 query_texts=[query], n_results=min(n, self.collection.count())
@@ -260,18 +267,6 @@ class BMOsMemory:
                 and len(results["documents"][0]) > 0
             ):
                 return results["documents"][0]
-            # with sqlite3.connect(self.db_path) as connection:
-            #     cursor = connection.cursor()
-            #     for w in words:
-            #         cursor.execute(
-            #             "SELECT content FROM memories WHERE content LIKE ? LIMIT 1",
-            #             (f"%{w}%",),
-            #         )
-            #         row = cursor.fetchone()
-            #         if row and row[0] not in result:
-            #             result.append(row[0])
-            # return result
-            return []
         except Exception as e:
             print(f"[BMO memory] Search error: {e}")
             return []
@@ -301,18 +296,15 @@ class BMOsMemory:
                     f"Your private thoughts/perception about them: {user_data[2]}."
                 )
 
-            # Fetch core memories (2 random high importance entries)
             cursor.execute(
                 "SELECT content FROM memories WHERE importance >= 7 ORDER BY RANDOM() LIMIT 2"
             )
             bmo_thoughts["core_memories"] = [row[0] for row in cursor.fetchall()]
 
-            # Fetch recent events (3 most recent entries)
             cursor.execute(
                 "SELECT content FROM memories ORDER BY created_at DESC LIMIT 3"
             )
             bmo_thoughts["recent_events"] = [row[0] for row in cursor.fetchall()]
-
         return bmo_thoughts
 
     def consolidate_bmo(self, user_id, conversation_id, recent_messages):
@@ -329,12 +321,11 @@ class BMOsMemory:
                 return
 
             current_facts = row[0] or "No facts recorded yet."
-            # Fixed conditional dict/string error inside json.loads
             current_perception = json.loads(row[1]) if row[1] else {}
 
             analysis_prompt = f"""
             You are the subconscious memory-processing core of BMO. 
-            Review the recent conversation messages and update BMO's inner memory and perception of the user.
+            Review the conversation and update your records.
 
             Current Memory Facts: {current_facts}
             Current BMO Perception: {json.dumps(current_perception)}
@@ -342,13 +333,14 @@ class BMOsMemory:
             Recent Conversation:
             {recent_messages}
 
-            Your task is to return a JSON object with two fields:
-                1. "updated_facts": Text summary of absolute facts learned about the user.
-                2. "updated_perception": JSON object with "connection_to_owner", "bmo_feelings_toward_them", "trust_level" (1-10), and "inside_jokes" (array).
-                3. "conversation_summary": A 1 to 2 sentence summary of this entire conversation.
-                4. "new_core_memories": An array of strings. Extract 1 or 2 highly important distinct concepts, events, or preferences mentioned. If nothing important happened, return an empty array [].
+            Your task is to return a raw JSON object with these fields:
+                1. "updated_facts": Summary of concrete facts learned.
+                2. "updated_perception": JSON with "connection_to_owner", "bmo_feelings_toward_them", "trust_level" (1-10), and "inside_jokes" (array).
+                3. "conversation_summary": A 1-2 sentence summary.
+                4. "emotional_valence": Overarching emotional tone of this chat: Choose exactly one ("Positive", "Negative", "Neutral", "Anxious", "Curious").
+                5. "new_core_memories": Array of strings extracting highly distinct concepts or preferences.
 
-            Respond ONLY with the raw JSON object. Do not include markdown formatting or backticks.
+            Respond ONLY with the raw JSON object. Do not wrap in markdown fences.
             """
 
             # Properly using the LLMClient instance and sending formatted messages
@@ -365,15 +357,14 @@ class BMOsMemory:
                     .strip()
                 )
                 new_data = json.loads(clean_response)
-                #
                 new_facts = new_data.get("updated_facts")
                 new_perception_str = json.dumps(new_data.get("updated_perception"))
                 summary = new_data.get("conversation_summary", "No summary provided.")
+                valence = new_data.get("emotional_valence", "Neutral")
                 core_memories = new_data.get("new_core_memories", [])
 
                 with sqlite3.connect(self.db_path) as conn:
                     cursor = conn.cursor()
-                    # Added missing commas in UPDATE query and normalized to CURRENT_TIMESTAMP
                     cursor.execute(
                         """
                         UPDATE users 
@@ -387,8 +378,15 @@ class BMOsMemory:
                         ),
                     )
                     conn.commit()
-
+                    # ending session - start processing new memory
                     self.end_session(conversation_id, summary)
+
+                    self.update_bmo_state(
+                        event="end_session_consolidation",
+                        status="resting",
+                        mood=valence,
+                        detail=f"Proccessed session summary: {summary}",
+                    )
 
                     for memory_text in core_memories:
                         # got to give high importance so bmo remebers them
@@ -397,7 +395,6 @@ class BMOsMemory:
                             source="Chat Consolidation",
                             importance=8,
                         )
-
                 print("BMO safely stored new memories!")
             except json.JSONDecodeError:
                 print("Oops! BMO's thoughts were too chaotic to parse this time..")
@@ -409,6 +406,7 @@ class BMOsMemory:
             row = cursor.fetchone()
             return row[0] if row else None
 
+    # to avoid duplicates
     def get_or_create_user(self, name: str) -> int:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -426,7 +424,6 @@ class BMOsMemory:
                     "inside_jokes": [],
                 }
             )
-
             cursor.execute(
                 """INSERT INTO users (name, facts, role_id, bmo_perception) 
                 VALUES (?, ?, ?, ?)""",
@@ -440,23 +437,11 @@ class BMOsMemory:
             conn.commit()
             return cursor.lastrowid
 
-    # def get_or_create_user(self, name):
-    #     with sqlite3.connect(self.db_path) as conn:
-    #         cursor = conn.cursor()
-    #         cursor.execute("SELECT id FROM users WHERE name = ?", (name,))
-    #         row = cursor.fetchone()
-    #         if row:
-    #             return row[0]
-    #         cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
-    #         conn.commit()
-    #         return cursor.lastrowid
-
-    def create_user(self, name, facts="", bmo_perception="{}"):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            # Fixed column syntax and commas
-            cursor.execute(
-                "INSERT INTO users (name, facts, bmo_perception) VALUES (?,?,?)",
-                (name, facts, bmo_perception),
-            )
-            connection.commit()
+    # def create_user(self, name, facts="", bmo_perception="{}"):
+    #     with sqlite3.connect(self.db_path) as connection:
+    #         cursor = connection.cursor()
+    #         cursor.execute(
+    #             "INSERT INTO users (name, facts, bmo_perception) VALUES (?,?,?)",
+    #             (name, facts, bmo_perception),
+    #         )
+    #         connection.commit()

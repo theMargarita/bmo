@@ -18,7 +18,7 @@ personality.py
 
 data/owner.json
 data/identity.json
-data/bmo.db
+data/bmo_memory.db
 data/chroma/
 
 #
