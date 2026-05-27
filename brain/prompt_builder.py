@@ -1,6 +1,7 @@
 from brain.personality import get_system_prompt
 from memory.identity import Identity
 from memory.bmos_memory import BMOsMemory
+from config import MAX_HISTORY
 
 """
         Structure:
@@ -14,13 +15,16 @@ class PromptBuilder:
     def __init__(self, identity_manager: Identity):
         self.identity_manager = identity_manager
 
-    def build(self, history, memories, bmo_thought) -> list[dict]:
-        messages = []  # empty list to hold the final messages
+    def build(self, history, memories, bmo_thought, game_context: str = None) -> list[dict]:
+        messages = []  
         # core system prompt with personality and mood
         messages.append(
             {"role": "system", "content": get_system_prompt()}
-        )  # add the system prompt to the messages list
-
+        )  
+            
+        if game_context:
+            messages.append({"role": "system", "content": game_context})
+        
         bmo_context = self.identity_manager.get_bmo_context()
         if bmo_context:
             messages.append(
@@ -44,27 +48,26 @@ class PromptBuilder:
 
         # else
         messages.extend(
-            history[-20:]
-        )  # add the last 20 messages from the history to the messages list
+            history[-MAX_HISTORY:]
+        ) 
         return messages
 
     def set_mood(self, mood: str):
         self.identity_manager.set_mood(mood)
 
     # -------fetching BMO's internal state from the database------
-    def build_with_personalities(self, user_input, user_id, memory_system, history):
+    def build_with_personalities(self, user_input, user_id, memory_system, history, game_context:str = None):
         memory_system = BMOsMemory()
         thoughts = memory_system.fetch_bmos_thoughts(
             user_id
-        )  # fetch BMO's thoughts using the memory system
-        # build the prompt with the fetched thoughts and the user input
-        # {thoughts["user_context"]}
+        )  
         instructions = f"""
-            You are BMO, respond naturally to the user based on your current internal state and the context of the conversation.
-            {thoughts["user_context"]}
+            Your name is BMO and you are inspired by BMO from Adventure Time. 
+            Respond naturally to the user based on your current internal state and the context of the conversation.
+            {thoughts.get("user_context", "")}
 
             [YOUR INTERNAL CONTEXT]
-            {thoughts.get("user_context", "You are talking a new friend.")}
+            {thoughts.get("user_context", "You are talking to a new friend.")}
 
             [CORE MEMORIES]
             -{thoughts["core_memories"][0] if len(thoughts["core_memories"]) > 0 else "Nothing special"}
@@ -77,11 +80,14 @@ class PromptBuilder:
             [CURRENT MOOD]
             -{self.identity_manager.get_mood()}
 """
+        if game_context:
+            instructions += f"\n\n[URGENT GAME MODE ACTIVE]\n{game_context}\n"
+        
 
         messages = [
             {"role": "system", "content": instructions},
             {"role": "user", "content": user_input},
         ]
-        messages.extend(history)
-
+        messages.extend(history[-MAX_HISTORY])
+        messages.append({"role": "user", "content": user_input})
         return messages
