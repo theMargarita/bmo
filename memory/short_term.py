@@ -1,28 +1,35 @@
 from config import MAX_HISTORY
 
-
+#noticed that this one does not work as well as I want to. 
 class ShortTermMemory:
     def __init__(self):
-        # list of messges in the short term memory, each message is a dict with keys "role" and "content"
         self._messages: list[dict] = []
+        self.game_active: bool = False
+        self.game_system_prompt: str = "" #Special instructions for the LLM during the game
+
 
     def add(self, role: str, content: str):
-        # add a message to session history, keeping only the last MAX_HISTORY messages
         self._messages.append({"role": role, "content": content})
-
         while (
             len(self._messages) > MAX_HISTORY
-        ):  # if the number of messages in the short term memory exceeds MAX_HISTORY
-            self._messages.pop(0)  # remove the oldest message
+        ):  
+            self._messages.pop(0)  
 
     def get_history(self) -> list[dict]:
-        # return the current session history as a list of messages
         return self._messages.copy()  # return a copy of the short term memory messages
 
     def clear(self):
-        # clear the short term memory
         self._messages = []
+        self.end_game()
 
     def is_empty(self) -> bool:
-        # check if the short term memory is empty
         return len(self._messages) == 0  # return True if the short term memory is empty
+
+#game management methods
+    def start_game(self, special_instructions: str):
+        self.game_active = True
+        self.game_system_prompt = special_instructions
+
+    def end_game(self):
+        self.game_active = False
+        self.game_system_prompt = ""
