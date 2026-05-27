@@ -29,7 +29,7 @@ class BMOsMemory:
 
         self.collection = self.chroma.get_or_create_collection(
             name="bmo_memories",
-            embedding_function=self.embedding_fn,
+            embedding_function=self.embedding_fu,
             metadata={"hnsw:space": "cosine"},
         )
 
@@ -40,18 +40,39 @@ class BMOsMemory:
             cursor.execute("SELECT COUNT(*) FROM roles")
             if cursor.fetchone()[0] == 0:
                 cursor.execute(
-                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES ('Creator', 'The creator of BMO', 'Sees BMO as her baby, because it is her (Margo's) first every made machine.')"
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    (
+                        'Creator', 
+                        'The creator of BMO', 
+                        "Sees BMO as her baby, because it is her (Margo's) first ever made machine."
+                    )
                 )
+                
                 cursor.execute(
-                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES ('Acquaintance', ''a familiar face', or 'a casual contact'', 'Highlighting someone you know casually, but not on an intimate level')"
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    (
+                        'Acquaintance', 
+                        'A familiar face, or a casual contact', 
+                        'Highlighting someone you know casually, but not on an intimate level'
+                    )
                 )
+                
                 cursor.execute(
-                    """INSERT INTO roles (name, role_description, relationship_notes) 
-                       VALUES ('Friend', '"Be there for each other"', '"Capturing personality and shared history"')"""
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    (
+                        'Friend', 
+                        'Be there for each other', 
+                        'Capturing personality and shared history'
+                    )
                 )
+                
                 cursor.execute(
-                    """INSERT INTO roles (name, role_description, relationship_notes) 
-                       VALUES ('Partner-in-crime', '"Serves as the twin"', '"Chaos and fun"')"""
+                    "INSERT INTO roles (name, role_description, relationship_notes) VALUES (?, ?, ?)",
+                    (
+                        'Partner-in-crime', 
+                        'Serves as the twin', 
+                        'Chaos and fun'
+                    )
                 )
 
                 conn.commit()
@@ -79,7 +100,7 @@ class BMOsMemory:
 
     # ---start session-----
     #removed equal to one in user_id - lets tests what will happend 
-    def start_session(self, mood: str, user_id: int) -> int:
+    def start_session(self, mood: str, user_id: int = 1) -> int:
         self.update_bmo_state(event="start_session", status="active", mood=mood, detail="User initiated chat.")
         return self.save_conversations(
             user_id, f"Session started.\n BMO's mood: {mood}"
