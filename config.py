@@ -20,5 +20,5 @@ MAX_MEMORIES = 5
 IDENTITY_FILE = "data/identity.json"
 
 # Database path (used later when we add long-term memory)
-DB_PATH = "data/bmo.db"
-# CHROMA_PATH = "data/chroma"
+DB_PATH = "data/bmo_memory.db"
+CHROMA_PATH = "data/chroma"

@@ -182,9 +182,9 @@ class Identity:
         return {
             "name": "Margo",
             "preferred_language": "English (though I can understand and speak some Swedish and French too)",
-            "interests": [],
+            "interests": OWNER_FILE,
             "response_style": "direct",
             "active_projects": [],
-            "notes": "",
+            "notes": "like to be corrected if grammer seems off. ",
             "relationship_started": datetime.now().strftime("%Y-%m-%d"),
         }
