@@ -191,7 +191,6 @@ class BMOsMemory:
             print(f"Could not save chat message: {e}")
 
     async def get_conversation_history(self, conversation_id: int) -> list:
-        """Fetch all messages for a conversation in order."""
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
                 "SELECT role_id, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
@@ -270,18 +269,26 @@ class BMOsMemory:
             if row:
                 return row[0]
 
-            default_role_id = await self.get_role_id("Acquaintance")
-            initial_perception = json.dumps(
-                {
-                    "connection_to_owner": "unknown",
-                    "bmo_feelings_toward_them": "neutral, just met",
-                    "trust_level": 3,
-                    "inside_jokes": [],
-                }
+            # Look up role_id on the SAME connection instead of opening a new one
+            cursor = await connection.execute(
+                "SELECT id FROM roles WHERE name = ?", ("Acquaintance",)
             )
+            role_row = await cursor.fetchone()
+            default_role_id = role_row[0] if role_row else None
+
+            if default_role_id is None:
+                print("[Warning] 'Acquaintance' role not found — did seed_database() run?")
+
+            initial_perception = json.dumps({
+                "connection_to_owner": "unknown",
+                "bmo_feelings_toward_them": "neutral, just met",
+                "trust_level": 3,
+                "inside_jokes": [],
+            })
+
             cursor = await connection.execute(
                 "INSERT INTO users (name, facts, role_id, bmo_perception) VALUES (?,?,?,?)",
-                ("A new person BMO has just met.", name, default_role_id, initial_perception),
+                (name, "A new person BMO has just met.", default_role_id, initial_perception),
             )
             await connection.commit()
             return cursor.lastrowid
