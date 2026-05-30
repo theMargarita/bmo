@@ -19,7 +19,7 @@ class BMOsMemory:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.llm = LLMClient()
 
-        #chroma setup
+        # chroma setup
         self.chroma = chromadb.PersistentClient(CHROMA_PATH)
 
         # embeddings function converts text -> verctors
@@ -36,7 +36,7 @@ class BMOsMemory:
             metadata={"hnsw:space": "cosine"},
         )
 
-    #-----SYNC function-----
+    # -----SYNC function-----
     def seed_database(self, owner_name="Creator"):
         # checks if roles exists, if not - hardcode the
         with sqlite3.connect(self.db_path) as conn:
@@ -44,7 +44,7 @@ class BMOsMemory:
             # checks if roles exists, if not - hardcode them
             cursor.execute("SELECT COUNT(*) FROM roles")
             if cursor.fetchone()[0] == 0:
-                #streamline code instead of repeat code
+                # streamline code instead of repeat code
                 roles = [
                     ("Creator", "The creator of AI inspired BMO", "It's her child."),
                     ("Acquaintance", "A familiar face", "Casual contact."),
@@ -67,7 +67,7 @@ class BMOsMemory:
                 conn.commit()
                 print(f"[Database] Default user '{owner_name}' created as User ID 1.")
 
-    #chromadb har no async API so it stays sync
+    # chromadb har no async API so it stays sync
     def count(self) -> int:
         try:
             return self.collection.count()
@@ -87,7 +87,8 @@ class BMOsMemory:
         except Exception as e:
             print(f"[BMO memory] Search error: {e}")
         return []
-    #saving both DBs so must stay sync for chromadb
+
+    # saving both DBs so must stay sync for chromadb
     def save(self, content: str, source: str, importance: int = 0, tags: list = None):
         try:
             chroma_id = str(uuid.uuid4())
@@ -109,8 +110,11 @@ class BMOsMemory:
             )
         except Exception as e:
             print(f"Error saving memory: {e}")
-    #same here
-    def update_bmo_state(self, event: str, status: str, mood: str = None, detail: str = None):
+
+    # same here
+    def update_bmo_state(
+        self, event: str, status: str, mood: str = None, detail: str = None
+    ):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -155,7 +159,7 @@ class BMOsMemory:
         except Exception as e:
             print(f"Could not save summary: {e}")
 
-    #--------ASYNC functions--------
+    # --------ASYNC functions--------
 
     async def start_session(self, mood: str, user_id: int = 1) -> int:
         self.update_bmo_state(
@@ -164,9 +168,13 @@ class BMOsMemory:
             mood=mood,
             detail="User initiated chat.",
         )
-        return await self.save_conversation(user_id, f"Session started.\nBMO's mood: {mood}")
+        return await self.save_conversation(
+            user_id, f"Session started.\nBMO's mood: {mood}"
+        )
 
-    async def save_conversation(self, user_id: int, message: str, summary=None) -> int | None:
+    async def save_conversation(
+        self, user_id: int, message: str, summary=None
+    ) -> int | None:
         try:
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute(
@@ -198,7 +206,9 @@ class BMOsMemory:
             )
             return await cursor.fetchall()
 
-    async def update_user_relation(self, user_id: int, new_fact: str, bmo_perception_json: str):
+    async def update_user_relation(
+        self, user_id: int, new_fact: str, bmo_perception_json: str
+    ):
         try:
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute(
@@ -238,13 +248,13 @@ class BMOsMemory:
                     f"Your private thoughts/perception about them: {user_data[2]}."
                 )
 
-            #high-importance memories (random sample so BMO feels varied)
+            # high-importance memories (random sample so BMO feels varied)
             cursor = await connection.execute(
                 "SELECT content FROM memories WHERE importance >= 7 ORDER BY RANDOM() LIMIT 2"
             )
             bmo_thoughts["core_memories"] = [row[0] for row in await cursor.fetchall()]
 
-            #most recent memories
+            # most recent memories
             cursor = await connection.execute(
                 "SELECT content FROM memories ORDER BY created_at DESC LIMIT 3"
             )
@@ -277,23 +287,34 @@ class BMOsMemory:
             default_role_id = role_row[0] if role_row else None
 
             if default_role_id is None:
-                print("[Warning] 'Acquaintance' role not found — did seed_database() run?")
+                print(
+                    "[Warning] 'Acquaintance' role not found — did seed_database() run?"
+                )
 
-            initial_perception = json.dumps({
-                "connection_to_owner": "unknown",
-                "bmo_feelings_toward_them": "neutral, just met",
-                "trust_level": 3,
-                "inside_jokes": [],
-            })
+            initial_perception = json.dumps(
+                {
+                    "connection_to_owner": "unknown",
+                    "bmo_feelings_toward_them": "neutral, just met",
+                    "trust_level": 3,
+                    "inside_jokes": [],
+                }
+            )
 
             cursor = await connection.execute(
                 "INSERT INTO users (name, facts, role_id, bmo_perception) VALUES (?,?,?,?)",
-                (name, "A new person BMO has just met.", default_role_id, initial_perception),
+                (
+                    name,
+                    "A new person BMO has just met.",
+                    default_role_id,
+                    initial_perception,
+                ),
             )
             await connection.commit()
             return cursor.lastrowid
 
-    async def consolidate_bmo(self, user_id: int, conversation_id: int, recent_messages: str):
+    async def consolidate_bmo(
+        self, user_id: int, conversation_id: int, recent_messages: str
+    ):
         async with aiosqlite.connect(self.db_path) as conn:
             cursor = await conn.execute(
                 "SELECT facts, bmo_perception FROM users WHERE id = ?", (user_id,)

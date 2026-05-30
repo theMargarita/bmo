@@ -45,7 +45,9 @@ async def run_bmo():
     last_state = bmo_memory.get_bmo_state()  # sync — called once at startup
     baseline_mood = last_state["mood"] if last_state else "Normal"
 
-    conversation_id = await bmo_memory.start_session(mood=baseline_mood, user_id=user_id)
+    conversation_id = await bmo_memory.start_session(
+        mood=baseline_mood, user_id=user_id
+    )
 
     print(f"\nModel: {llm_client.model}")
     print(f"Mood : {baseline_mood}")
