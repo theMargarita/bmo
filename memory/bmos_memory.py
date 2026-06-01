@@ -358,7 +358,16 @@ class BMOsMemory:
                 )
                 new_data = json.loads(clean_response)
                 new_facts = new_data.get("updated_facts")
-                new_perception_str = json.dumps(new_data.get("updated_perception"))
+                if isinstance(new_facts, (dict, list)):
+                    new_facts = json.dumps(new_facts)
+                else:
+                    new_facts = str(new_facts) if new_facts else "No new facts recorded"
+
+                new_perception = json.dumps(new_data.get("updated_perception"))
+                if isinstance(new_perception, (dict, list)):
+                    new_perception = json.dumps(new_perception) 
+                else:
+                    new_perception = str(new_perception) if new_perception else {}
                 summary = new_data.get("conversation_summary", "No summary provided.")
                 valence = new_data.get("emotional_valence", "Neutral")
                 core_memories = new_data.get("new_core_memories", [])
@@ -373,7 +382,7 @@ class BMOsMemory:
                         """,
                         (
                             new_facts,
-                            new_perception_str,
+                            new_perception,
                             user_id,
                         ),
                     )
