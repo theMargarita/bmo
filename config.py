@@ -6,6 +6,10 @@
 MODEL = "llama3.2"
 # MODEL = "llama3.2:3b"
 
+# small offline emmbedding model
+# Alternative: "BAAI/bge-small-en-v1.5" — slightly better, still small
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+
 # Ollama runs locally — no API key needed
 OLLAMA_URL = "http://localhost:11434"
 
@@ -22,3 +26,4 @@ IDENTITY_FILE = "data/identity.json"
 # Database path (used later when we add long-term memory)
 DB_PATH = "data/bmo_memory.db"
 CHROMA_PATH = "data/chroma"
+
