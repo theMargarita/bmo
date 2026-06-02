@@ -1,10 +1,10 @@
 import os
-import re
 import uuid
 import sqlite3
 from brain.llm import LLMClient
 import chromadb
 from chromadb.utils import embedding_functions
+from memory.chunker import Chunker
 
 from config import CHROMA_PATH
 
@@ -14,6 +14,7 @@ class BMOsMemory:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.llm = LLMClient()
         # self.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+        self.chunker = Chunker(chunk_size=200, overlap=15)
 
         # chroma setup
         self.chroma = chromadb.PersistentClient(CHROMA_PATH)
@@ -30,7 +31,7 @@ class BMOsMemory:
 
     # -----SYNC function-----
     def seed_database(self, owner_name="Creator"):
-        # checks if roles exists, if not - hardcode the
+        # checks if roles exists, if not - hardcode
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             # checks if roles exists, if not - hardcode them
@@ -101,35 +102,7 @@ class BMOsMemory:
             print(f"Could not create or save a summary: {e}")
             return None
 
-    #longer content should be split into chuncks before embedding so retrieval is more precis
-    # def chunk_text_with_overlap(self, text: str, chunck_size: int = 200, overlap: int = 15) -> list[str]:
-    #     #slit punctuation (roughtly sentence boundaries)
-    #     sentences = re.split(r'(?<=[.!?]) +', text) #re -> regex?
-    #     chunks = []
-    #     current_chunk = []
-    #     current_length = 0
 
-    #     for sntc in sentences:
-    #         words = sntc.split()
-    #         # If adding this sentence exceeds our chunk size, save the current chunk
-    #         if current_length + len(words) > chunck_size and current_chunk:
-    #             chunks.append(" ".join(current_chunk))
-    #             #keep the last few words (overlap) to maintain contect bridging
-    #             current_chunk = current_chunk[-overlap:]
-    #             current_length = sum(len(w.split()) for w in current_chunk)
-
-    #         current_chunk.append(sntc)
-    #         current_length += len(words)
-
-    #     if current_chunk:
-    #         chunks.append(" ".join(current_chunk))
-
-    #     return chunks
-        # words = text.split()
-        # return [
-        #     " ".join(words[i:i + chunck_size])
-        #     for i in range(0, len(words), chunck_size)
-        # ]
     #not sure about thins one yet 
     def calculate_importance(self, text:str) -> int:
         text_lower = text.lower()
@@ -153,7 +126,7 @@ class BMOsMemory:
     # Saving 'core' memories
     def save(self, content: str, source: str, importance: int = 0, tags: list = None):
         try:
-            chunks = self.chunk_text_with_overlap(content)
+            chunks = self.chunker.chunk_text_with_overlap(content)
             for c in chunks:
                 chroma_id = str(uuid.uuid4())
                 entry_source = source

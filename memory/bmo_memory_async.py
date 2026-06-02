@@ -6,7 +6,9 @@ import aiosqlite
 import chromadb
 from brain.llm import LLMClient
 from config import CHROMA_PATH
+from memory.chunker import Chunker
 from chromadb.utils import embedding_functions
+
 
 class BMOMemoryAsync:
     def __init__(self):
@@ -24,6 +26,7 @@ class BMOMemoryAsync:
         self.chroma = await asyncio.to_thread(chromadb.PersistentClient, CHROMA_PATH)
         self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(model_name="nomic-embed-text")
         self.collection = await asyncio.to_thread(self.chroma.get_or_create_collection, name="bmo_memories", embedding_function=self.embedding_fu)
+        self.chunker = Chunker.chunk(chunk_size=200, opverlap=15)
         return self
 
     async def start_session(self, mood: str, user_id: int = 1) -> int:
