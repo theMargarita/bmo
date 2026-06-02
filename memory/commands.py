@@ -68,7 +68,7 @@ def run_bmo():
     print_bmo(bmo_greeting)
 
     try:
-        first_input = input("\nYou: ").strip()
+        first_input = input("\n[You]: ").strip()
     except (KeyboardInterrupt, EOFError):
         first_input = "quit"
 
@@ -119,7 +119,7 @@ def run_bmo():
 #the older part (need to just remeber incase something is off or i regret)
     while True:
         try:
-            user_input = input("\nYou: ").strip()
+            user_input = input("\n[You]: ").strip()
         except (KeyboardInterrupt, EOFError):
             user_input = "quit"
 
