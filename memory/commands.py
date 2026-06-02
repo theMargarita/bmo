@@ -3,6 +3,7 @@ import random
 import sys
 from brain.llm import LLMClient
 from brain.prompt_builder import PromptBuilder
+from memory.bmo_memory_async import BMOMemoryAsync
 from memory.short_term import ShortTermMemory
 from memory.identity import Identity
 from brain.personality import get_system_prompt
@@ -35,7 +36,7 @@ async def run_bmo():
 
     bmo_memory = BMOsMemory()
     bmo_memory.seed_database(owner_name="Margo")  # sync — fine at startup
-
+    async_bmo_mem = BMOMemoryAsync()
     # name = input("Who am I speaking to? ").strip()
     # if not name:
     #     name = "Stranger"
@@ -96,18 +97,18 @@ async def run_bmo():
     extracted_name = extracted_name.strip(".,!'\"")
 
     #creates user and start db sesion 
-    user_id = await bmo_memory.get_or_create_user(extracted_name)
-    conversation_id = await bmo_memory.start_session(mood=baseline_mood, user_id=user_id)
+    user_id = await async_bmo_mem.get_or_create_user(extracted_name)
+    conversation_id = await async_bmo_mem.start_session(mood=baseline_mood, user_id=user_id)
 
     #log first exchanged and short-term into database
     short_term_memory.add("BMO", bmo_greeting)
     short_term_memory.add("user", first_input)
-    await bmo_memory.save_chat_message(conversation_id, "BMO", bmo_greeting)
-    await bmo_memory.save_chat_message(conversation_id, "user", first_input)
+    await async_bmo_mem.save_chat_message(conversation_id, "BMO", bmo_greeting)
+    await async_bmo_mem.save_chat_message(conversation_id, "user", first_input)
 
     #check who it is 
     relevant_memories = bmo_memory.search_context(first_input)
-    bmo_thought = await bmo_memory.fetch_bmos_thoughts(user_id=user_id)
+    bmo_thought = await async_bmo_mem.fetch_bmos_thoughts(user_id=user_id)
 
     messages = prompt_builder.build(
         history = short_term_memory.get_history(),
@@ -117,7 +118,7 @@ async def run_bmo():
 
     reaction = await asyncio.to_thread(llm_client.chat, messages)
     short_term_memory.add("BMO", reaction)
-    await bmo_memory.save_chat_message(conversation_id, "BMO", reaction)
+    await async_bmo_mem.save_chat_message(conversation_id, "BMO", reaction)
     print_bmo(reaction)
 
 
@@ -138,7 +139,7 @@ async def run_bmo():
                 [f"{m['role']}: {m['content']}" for m in recent_history]
             )
 
-            await bmo_memory.consolidate_bmo(
+            await async_bmo_mem.consolidate_bmo(
                 user_id=user_id,
                 conversation_id=conversation_id,
                 recent_messages=history_text,
@@ -177,12 +178,12 @@ async def run_bmo():
             continue
 
         # Log conversation data
-        await bmo_memory.save_chat_message(conversation_id, "user", user_input)
+        await async_bmo_mem.save_chat_message(conversation_id, "user", user_input)
 
         # search_context is sync (ChromaDB) — no await needed
         relevant_memories = bmo_memory.search_context(user_input)
 
-        bmo_thought = await bmo_memory.fetch_bmos_thoughts(user_id=user_id)
+        bmo_thought = await async_bmo_mem.fetch_bmos_thoughts(user_id=user_id)
         short_term_memory.add("user", user_input)
 
         messages = prompt_builder.build(
@@ -195,7 +196,7 @@ async def run_bmo():
         response = await asyncio.to_thread(llm_client.chat, messages)
 
         short_term_memory.add("BMO", response)
-        await bmo_memory.save_chat_message(conversation_id, "BMO", response)
+        await async_bmo_mem.save_chat_message(conversation_id, "BMO", response)
         print_bmo(response)
 
 
