@@ -44,6 +44,7 @@ class PromptBuilder:
             memory_block = "Relevant things you remember: \n" + "\n".join(
                 f"- {m}" for m in memories
             )
+            # system += f"\n\nRelevant memories (use these to inform your response):\n{memory_block}"
             messages.append({"role": "system", "content": memory_block})
 
         # else

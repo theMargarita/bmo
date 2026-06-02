@@ -155,26 +155,36 @@ class BMOsMemory:
             print(f"Could not create or save a summary: {e}")
             return None
 
+    #longer content should be split into chuncks before embedding so retrieval is more precis
+    def chunk_text(self, text: str, chunck_size: int = 200) -> list[str]:
+        words = text.split()
+        return [
+            " ".join(words[i:i + chunck_size])
+            for i in range(0, len(words), chunck_size)
+        ]
+
     # Saving 'core' memories
     def save(self, content: str, source: str, importance: int = 0, tags: list = None):
         try:
-            chroma_id = str(uuid.uuid4())
-            if tags:
-                source = f"{source} | tags: {','.join(tags)}"
+            chunks = self.chunk_text(content)
+            for c in chunks:
+                chroma_id = str(uuid.uuid4())
+                if tags:
+                    source = f"{source} | tags: {','.join(tags)}"
 
-            with sqlite3.connect(self.db_path) as connection:
-                cursor = connection.cursor()
-                cursor.execute(
-                    "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?,?)",
-                    (content, source, importance, chroma_id),
-                )
-                connection.commit()
+                with sqlite3.connect(self.db_path) as connection:
+                    cursor = connection.cursor()
+                    cursor.execute(
+                        "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?,?)",
+                        (content, source, importance, chroma_id),
+                    )
+                    connection.commit()
 
-                # save vectors to chromadb
-                self.collection.add(
-                    documents=[content],
-                    ids=[chroma_id],
-                    metadatas=[{"source": source, "importance": importance}],
+                    # save vectors to chromadb
+                    self.collection.add(
+                        documents=[content],
+                        ids=[chroma_id],
+                        metadatas=[{"source": source, "importance": importance}],
                 )
         except sqlite3.Error as e:
             print(f"Error saving memory: {e}")
@@ -252,21 +262,36 @@ class BMOsMemory:
             return cursor.fetchall()
 
     # now this will be used for chromadb
-    def search_context(self, query: str, n: int = 3) -> list[str]:
+    def search_context(self, query: str, n: int = 5) -> list[str]:
         if self.collection.count() == 0:
             return []
-
         try:
             results = self.collection.query(
-                query_texts=[query], n_results=min(n, self.collection.count())
+                query_texts=[query], 
+                n_results=min(n, self.collection.count()), 
+                include=["documents", "metadatas", "distances"]
             )
+            docs = results["documents"][0]
+            metas = results["metadatas"][0]
+            distances = results["distances"][0]
 
-            if (
-                results
-                and results.get("documents")
-                and len(results["documents"][0]) > 0
-            ):
-                return results["documents"][0]
+           #combine sematics similarity with importance score 
+            scored = []
+            for doc, meta, dist in zip(docs, metas, distances):
+                similarity = 1 - dist #consine distance importance score
+                importance_boost = meta.get("importance", 0) / 10
+                score = similarity + (importance_boost * 0.3)
+                scored.append((score, doc))
+
+            scored.sort(reverse=True)
+            return [doc for _, doc in scored[:3]]
+
+            # if (
+            #     results
+            #     and results.get("documents")
+            #     and len(results["documents"][0]) > 0
+            # ):
+            #     return results["documents"][0]
         except Exception as e:
             print(f"[BMO memory] Search error: {e}")
             return []
