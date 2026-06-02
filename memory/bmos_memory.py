@@ -103,25 +103,7 @@ class BMOsMemory:
             return None
 
 
-    #not sure about thins one yet 
-    def calculate_importance(self, text:str) -> int:
-        text_lower = text.lower()
-        score = 3 #mundane facts
 
-        #high-value emotional or relational keywords
-        core_concepts = [] #emotions, feeling, other keywords
-        if any(w in text_lower for w in core_concepts):
-            score += 3
-
-        #identity marks (more focus on me and bmo)
-        identity_marks = [] #like 'you are' 'my' etc
-        if any(m in text_lower for m in identity_marks):
-            score += 2
-
-        if '!' in text or text.isupper():
-            score += 1
-
-        return min(score, 10)
 
     # Saving 'core' memories
     def save(self, content: str, source: str, importance: int = 0, tags: list = None):
