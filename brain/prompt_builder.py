@@ -1,19 +1,15 @@
 from brain.personality import get_system_prompt
+from memory.bmo_memory_async import BMOMemoryAsync
 from memory.identity import Identity
-from memory.bmos_memory import BMOsMemory
-from config import MAX_HISTORY
 
-"""
-        Structure:
-        1. System prompt (personality + mood)
-        2. Injected long-term memories if any (added as a system message)
-        3. Current session conversation history
-        """
+# from memory.bmos_memory import BMOsMemory
+from config import MAX_HISTORY
 
 
 class PromptBuilder:
-    def __init__(self, identity_manager: Identity):
+    def __init__(self, identity_manager: Identity, memory_system: BMOMemoryAsync):
         self.identity_manager = identity_manager
+        self.memory_system = memory_system
 
     def build(
         self, history, memories, bmo_thought, game_context: str = None
@@ -44,6 +40,7 @@ class PromptBuilder:
             memory_block = "Relevant things you remember: \n" + "\n".join(
                 f"- {m}" for m in memories
             )
+            # system += f"\n\nRelevant memories (use these to inform your response):\n{memory_block}"
             messages.append({"role": "system", "content": memory_block})
 
         # else
@@ -54,11 +51,10 @@ class PromptBuilder:
         self.identity_manager.set_mood(mood)
 
     # -------fetching BMO's internal state from the database------
-    def build_with_personalities(
-        self, user_input, user_id, memory_system, history, game_context: str = None
+    async def build_with_personalities(
+        self, user_input, user_id, history, game_context: str = None
     ):
-        memory_system = BMOsMemory()
-        thoughts = memory_system.fetch_bmos_thoughts(user_id)
+        thoughts = await self.memory_system.fetch_bmos_thoughts(user_id)
         instructions = f"""
             Your name is BMO and you are inspired by BMO from Adventure Time. 
             Respond naturally to the user based on your current internal state and the context of the conversation.
@@ -83,8 +79,8 @@ class PromptBuilder:
 
         messages = [
             {"role": "system", "content": instructions},
-            {"role": "user", "content": user_input},
+            # {"role": "user", "content": user_input},
         ]
-        messages.extend(history[-MAX_HISTORY])
+        messages.extend(history[-MAX_HISTORY:])
         messages.append({"role": "user", "content": user_input})
         return messages
