@@ -12,7 +12,7 @@ class PromptBuilder:
         self.memory_system = memory_system
 
     def build(
-        self, history, memories, game_context: str = None
+        self, history, memories,bmo_thought, game_context: str = None
     ) -> list[dict]:
         messages = []
         # core system prompt with personality and mood
@@ -79,7 +79,7 @@ class PromptBuilder:
 
         messages = [
             {"role": "system", "content": instructions},
-            {"role": "user", "content": user_input},
+            # {"role": "user", "content": user_input},
         ]
         messages.extend(history[-MAX_HISTORY:])
         messages.append({"role": "user", "content": user_input})
