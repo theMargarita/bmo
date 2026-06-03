@@ -2,7 +2,7 @@ import os
 import uuid
 import sqlite3
 
-from sentence_transformers import CrossEncoder
+# from sentence_transformers import CrossEncoder
 from brain.llm import LLMClient
 import chromadb
 from memory.chunker import Chunker
@@ -12,23 +12,24 @@ from memory.embedder import Embedder
 from memory.importance_score import calculate_importance
 
 class BMOsMemory:
-    def __init__(self, db_path="data/bmo_memory.db"):
+    def __init__(self, db_path="data/bmo_memory.db", chroma_collection=None):
         self.db_path = db_path
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.llm = LLMClient()
-        model_path = "./models/ms-marco-MiniLM-L-6-v2"
-        self.reranker = CrossEncoder(model_path)
         self.chunker = Chunker(chunk_size=200, overlap=15)
         self.embedder = Embedder()
-        self.reranker = self.embedder.reranker 
-        # chroma setup
-        self.chroma = chromadb.PersistentClient(CHROMA_PATH)
-        # Chroma will use your __call__ method automatically.
-        self.collection = self.chroma.get_or_create_collection(
-            name="bmo_memories",
-            embedding_function=self.embedder, 
-            metadata={"hnsw:space": "cosine"},
-        )
+        self.reranker = self.embedder.reranker
+
+        if chroma_collection is not None:
+            self.collection = chroma_collection
+            self.chroma = None
+        else:
+            self.chroma = chromadb.PersistentClient(CHROMA_PATH)
+            self.collection = self.chroma.get_or_create_collection(
+                name="bmo_memories",
+                embedding_function=self.embedder,
+                metadata={"hnsw:space": "cosine"},
+            )
 
     # -----SYNC function-----
     def seed_database(self, owner_name="Creator"):
@@ -56,7 +57,7 @@ class BMOsMemory:
             if cursor.fetchone()[0] == 0:
                 cursor.execute(
                     "INSERT INTO users (name, facts, role_id, bmo_perception) VALUES (?, ?, 1, '{}')",
-                    (owner_name,),
+                    (owner_name, ""),
                 )
                 conn.commit()
                 print(f"[Database] Default user '{owner_name}' created as User ID 1.")
@@ -104,55 +105,43 @@ class BMOsMemory:
             return None
 
 
-
-
-    # Saving 'core' memories
+#'core' memory saving
     def save(self, content: str, source: str, importance: int = None, tags: list = None):
         try:
             if importance is None:
                 importance = calculate_importance(content)
 
             chunks = self.chunker.chunk_text_with_overlap(content)
-            embeddings = self.model.encode(chunks).tolist()
+            if not chunks:
+                return
 
+            # Format source with tags if provided
+            entry_source = source
+            if tags:
+                entry_source = f"{source} | tags: {','.join(tags)}"
+
+            # Generate distinct unique IDs for each chunk
             ids = [str(uuid.uuid4()) for _ in chunks]
-            metadatas = [{"aource": source, "importance": importance} for _ in chunks]
+            metadatas = [{"source": entry_source, "importance": importance} for _ in chunks]
 
+            # Chroma uses self.embedder automatically to handle SentenceTransformers!
             self.collection.add(
                 documents=chunks,
-                embeddings=embeddings,
                 ids=ids,
                 metadatas=metadatas
             )
 
-            for c in chunks:
-                # chroma_id = str(uuid.uuid4())
-                entry_source = source
-                if tags:
-                    entry_source = f"{source} | tags: {','.join(tags)}"
-
-                # save chunk to sqlite
-                try:
-                    with sqlite3.connect(self.db_path) as connection:
-                        cursor = connection.cursor()
-                        cursor.execute(
-                            "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?,?)",
-                            (c, entry_source, importance, ids), #used to be chroma id
-                        )
-                        connection.commit()
-                except sqlite3.Error as db_err:
-                    print(f"SQLite error saving memory chunk: {db_err}")
-                    # continue to attempt adding to chroma, but do not crash
-
-                # save vectors to chromadb (one add per chunk)
-                try:
-                    self.collection.add(
-                        documents=[c],
-                        ids=[ids],
-                        metadatas=[{"source": entry_source, "importance": importance}],
+            with sqlite3.connect(self.db_path) as connection:
+                cursor = connection.cursor()
+                for id, single_chunk in zip(ids, chunks):
+                    cursor.execute(
+                        "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?,?)",
+                        (single_chunk, entry_source, importance, id),
                     )
-                except Exception as ch_err:
-                    print(f"Chroma add failed for chunk (id={ids}): {ch_err}")
+                connection.commit()
+                #
+                print(f"[Memory] Librarian successfully archived {len(chunks)} new memory chunks.")
+
         except Exception as e:
             print(f"Error saving memory: {e}")
 

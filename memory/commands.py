@@ -1,9 +1,3 @@
-# FORCE Hugging Face and Transformers libraries to run in offline mode globally
-import os
-
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
-os.environ["HF_DATASETS_OFFLINE"] = "1"
-
 import asyncio
 import random
 import sys
@@ -33,18 +27,22 @@ async def run_bmo():
     identity = Identity()
     identity.auto_shift_mood()
 
+    bmo_memory = BMOsMemory(db_path=DB_PATH)
+    bmo_memory.seed_database(owner_name="Margo")  # sync — fine at startup
+    # memory_system = BMOMemoryAsync()
+    memory_system = await BMOMemoryAsync.create(db_path=DB_PATH)
+    memory_system.sync = bmo_memory
+
     llm_client = LLMClient()
     short_term_memory = ShortTermMemory()
-    prompt_builder = PromptBuilder(identity_manager=identity)
+    prompt_builder = PromptBuilder(identity_manager=identity, memory_system=memory_system)
+    
 
     if not llm_client.is_available():
         print("\n[Error] Cannot reach Ollama.")
         sys.exit(1)
 
-    bmo_memory = BMOsMemory(db_path=DB_PATH)
-    bmo_memory.seed_database(owner_name="Margo")  # sync — fine at startup
 
-    async_bmo_mem = BMOMemoryAsync.create(db_path=DB_PATH)
 
     # name = input("Who am I speaking to? ").strip()
     # if not name:
@@ -106,18 +104,18 @@ async def run_bmo():
     extracted_name = extracted_name.strip(".,!'\"")
 
     #creates user and start db sesion 
-    user_id = await async_bmo_mem.get_or_create_user(extracted_name)
-    conversation_id = await async_bmo_mem.start_session(mood=baseline_mood, user_id=user_id)
+    user_id = await memory_system.get_or_create_user(extracted_name)
+    conversation_id = await memory_system.start_session(mood=baseline_mood, user_id=user_id)
 
     #log first exchanged and short-term into database
     short_term_memory.add("BMO", opening)
     short_term_memory.add("user", first_input)
-    await async_bmo_mem.save_chat_message(conversation_id, "BMO", opening)
-    await async_bmo_mem.save_chat_message(conversation_id, "user", first_input)
+    await memory_system.save_chat_message(conversation_id, "BMO", opening)
+    await memory_system.save_chat_message(conversation_id, "user", first_input)
 
     #check who it is 
     relevant_memories = bmo_memory.search_context(first_input)
-    bmo_thought = await async_bmo_mem.fetch_bmos_thoughts(user_id=user_id)
+    bmo_thought = await memory_system.fetch_bmos_thoughts(user_id=user_id)
 
     messages = prompt_builder.build(
         history = short_term_memory.get_history(),
@@ -127,7 +125,7 @@ async def run_bmo():
 
     reaction = await asyncio.to_thread(llm_client.chat, messages)
     short_term_memory.add("BMO", reaction)
-    await async_bmo_mem.save_chat_message(conversation_id, "BMO", reaction)
+    await memory_system.save_chat_message(conversation_id, "BMO", reaction)
     print_bmo(reaction)
 
 
@@ -148,7 +146,7 @@ async def run_bmo():
                 [f"{m['role']}: {m['content']}" for m in recent_history]
             )
 
-            await async_bmo_mem.consolidate_bmo(
+            await memory_system.consolidate_bmo(
                 user_id=user_id,
                 conversation_id=conversation_id,
                 recent_messages=history_text,
@@ -187,12 +185,12 @@ async def run_bmo():
             continue
 
         # Log conversation data
-        await async_bmo_mem.save_chat_message(conversation_id, "user", user_input)
+        await memory_system.save_chat_message(conversation_id, "user", user_input)
 
         # search_context is sync (ChromaDB) — no await needed
         relevant_memories = bmo_memory.search_context(user_input)
 
-        bmo_thought = await async_bmo_mem.fetch_bmos_thoughts(user_id=user_id)
+        bmo_thought = await memory_system.fetch_bmos_thoughts(user_id=user_id)
         short_term_memory.add("user", user_input)
 
         messages = prompt_builder.build(
@@ -205,7 +203,7 @@ async def run_bmo():
         response = await asyncio.to_thread(llm_client.chat, messages)
 
         short_term_memory.add("BMO", response)
-        await async_bmo_mem.save_chat_message(conversation_id, "BMO", response)
+        await memory_system.save_chat_message(conversation_id, "BMO", response)
         print_bmo(response)
 
 

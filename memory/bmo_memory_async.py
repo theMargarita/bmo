@@ -5,11 +5,13 @@ import aiosqlite
 import chromadb
 from brain.llm import LLMClient
 from config import CHROMA_PATH
+from memory.bmos_memory import BMOsMemory
 from memory.chunker import Chunker
-from chromadb.utils import embedding_functions
+# from chromadb.utils import embedding_functions
+from memory.embedder import Embedder
 
 
-class BMOMemoryAsync:
+class BMOMemoryAsync(BMOsMemory):
     def __init__(self):
         self.db_path = None
         self.llm = None
@@ -23,13 +25,14 @@ class BMOMemoryAsync:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.llm = await asyncio.to_thread(LLMClient)   # construct off-loop if blocking
         self.chroma = await asyncio.to_thread(chromadb.PersistentClient, CHROMA_PATH)
-        self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(model_name="nomic-embed-text")
-        self.collection = await asyncio.to_thread(self.chroma.get_or_create_collection, name="bmo_memories", embedding_function=self.embedding_fu)
-        self.chunker = Chunker(chunk_size=200, opverlap=15)
+        # self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(model_name="nomic-embed-text")
+        self.embedder = await asyncio.to_thread(Embedder)
+        self.collection = await asyncio.to_thread(self.chroma.get_or_create_collection, name="bmo_memories", embedding_function=self.embedder)
+        self.chunker = Chunker(chunk_size=200, overlap=15)
         return self
 
     async def start_session(self, mood: str, user_id: int = 1) -> int:
-        self.update_bmo_state(
+        self.sync.update_bmo_state(
             event="start_session",
             status="active",
             mood=mood,
@@ -257,7 +260,7 @@ class BMOMemoryAsync:
                         WHERE id = ?""",
                         (new_facts, new_perception, user_id),
                     )
-                await conn.commit()
+                    await conn.commit()
             # ending session - start processing new memory
                 await asyncio.to_thread(self.end_session, conversation_id, summary)
 
