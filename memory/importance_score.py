@@ -20,15 +20,13 @@ def calculate_importance(text: str) -> int:
         if re.search(rf"\b{word}\b", text_lower):
             score += 2
 
-        if '!' in text or text.isupper():
-            score += 1
+    if '!' in text or text.isupper():
+        score += 1
 
     for word in MEDIUM_IMPORTANCE:
         if re.search(rf"\b{word}\b", text_lower):
             score += 1
         
-        if '!' in text or text.isupper():
-            score += 1
 
     # Length bonus — longer memories tend to be more detailed
     word_count = len(text.split())

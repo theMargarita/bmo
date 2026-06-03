@@ -1,8 +1,15 @@
+# FORCE Hugging Face and Transformers libraries to run in offline mode globally
+import os
+
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_DATASETS_OFFLINE"] = "1"
+
 import asyncio
 import random
 import sys
 from brain.llm import LLMClient
 from brain.prompt_builder import PromptBuilder
+from config import DB_PATH
 from memory.bmo_memory_async import BMOMemoryAsync
 from memory.short_term import ShortTermMemory
 from memory.identity import Identity
@@ -34,9 +41,11 @@ async def run_bmo():
         print("\n[Error] Cannot reach Ollama.")
         sys.exit(1)
 
-    bmo_memory = BMOsMemory()
+    bmo_memory = BMOsMemory(db_path=DB_PATH)
     bmo_memory.seed_database(owner_name="Margo")  # sync — fine at startup
-    async_bmo_mem = BMOMemoryAsync()
+
+    async_bmo_mem = BMOMemoryAsync.create(db_path=DB_PATH)
+
     # name = input("Who am I speaking to? ").strip()
     # if not name:
     #     name = "Stranger"
@@ -70,8 +79,8 @@ async def run_bmo():
     print_bmo(opening)
 
     #new part
-    bmo_greeting = llm_client.chat(opening_prompt)
-    print_bmo(bmo_greeting)
+    # bmo_greeting = llm_client.chat(opening_prompt)
+    # print_bmo(bmo_greeting)
 
     try:
         first_input = input("\n[You]: ").strip()
@@ -101,9 +110,9 @@ async def run_bmo():
     conversation_id = await async_bmo_mem.start_session(mood=baseline_mood, user_id=user_id)
 
     #log first exchanged and short-term into database
-    short_term_memory.add("BMO", bmo_greeting)
+    short_term_memory.add("BMO", opening)
     short_term_memory.add("user", first_input)
-    await async_bmo_mem.save_chat_message(conversation_id, "BMO", bmo_greeting)
+    await async_bmo_mem.save_chat_message(conversation_id, "BMO", opening)
     await async_bmo_mem.save_chat_message(conversation_id, "user", first_input)
 
     #check who it is 
