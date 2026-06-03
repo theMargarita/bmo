@@ -11,6 +11,7 @@ from config import CHROMA_PATH
 from memory.embedder import Embedder
 from memory.importance_score import calculate_importance
 
+
 class BMOsMemory:
     def __init__(
         self,
@@ -110,9 +111,10 @@ class BMOsMemory:
             print(f"Could not create or save a summary: {e}")
             return None
 
-
-#'core' memory saving
-    def save(self, content: str, source: str, importance: int = None, tags: list = None):
+    #'core' memory saving
+    def save(
+        self, content: str, source: str, importance: int = None, tags: list = None
+    ):
         try:
             if importance is None:
                 importance = calculate_importance(content)
@@ -128,14 +130,13 @@ class BMOsMemory:
 
             # Generate distinct unique IDs for each chunk
             ids = [str(uuid.uuid4()) for _ in chunks]
-            metadatas = [{"source": entry_source, "importance": importance} for _ in chunks]
+            metadatas = [
+                {"source": entry_source, "importance": importance} for _ in chunks
+            ]
             embeddings = self.embedder.embed_batch(chunks)
 
             self.collection.add(
-                documents=chunks,
-                embeddings=embeddings,
-                ids=ids,
-                metadatas=metadatas
+                documents=chunks, embeddings=embeddings, ids=ids, metadatas=metadatas
             )
 
             with sqlite3.connect(self.db_path) as connection:
@@ -147,7 +148,9 @@ class BMOsMemory:
                     )
                 connection.commit()
                 #
-                print(f"[Memory] Librarian successfully archived {len(chunks)} new memory chunks.")
+                print(
+                    f"[Memory] Librarian successfully archived {len(chunks)} new memory chunks."
+                )
 
         except Exception as e:
             print(f"Error saving memory: {e}")
@@ -186,25 +189,24 @@ class BMOsMemory:
             print(f"Could not fetch BMOs status: {e}")
             return None
 
-
-     # now this will be used for chromadb
+    # now this will be used for chromadb
     def search_context(self, query: str, n: int = 5) -> list[str]:
         if self.collection.count() == 0:
             return []
         try:
             results = self.collection.query(
-                query_texts=[query], 
-                n_results=min(n, self.collection.count()), 
-                include=["documents", "metadatas", "distances"]
+                query_texts=[query],
+                n_results=min(n, self.collection.count()),
+                include=["documents", "metadatas", "distances"],
             )
             docs = results["documents"][0]
             metas = results["metadatas"][0]
             distances = results["distances"][0]
 
-           #combine sematics similarity with importance score 
+            # combine sematics similarity with importance score
             scored = []
             for doc, meta, dist in zip(docs, metas, distances):
-                similarity = 1 - dist #consine distance importance score
+                similarity = 1 - dist  # consine distance importance score
                 importance_boost = meta.get("importance", 0) / 10
                 score = similarity + (importance_boost * 0.3)
                 scored.append((score, doc))
@@ -215,4 +217,3 @@ class BMOsMemory:
         except Exception as e:
             print(f"Could not update user: {e}")
             return []
-

@@ -32,14 +32,13 @@ async def run_bmo():
 
     llm_client = LLMClient()
     short_term_memory = ShortTermMemory()
-    prompt_builder = PromptBuilder(identity_manager=identity, memory_system=memory_system)
-    
+    prompt_builder = PromptBuilder(
+        identity_manager=identity, memory_system=memory_system
+    )
 
     if not llm_client.is_available():
         print("\n[Error] Cannot reach Ollama.")
         sys.exit(1)
-
-
 
     # name = input("Who am I speaking to? ").strip()
     # if not name:
@@ -63,17 +62,17 @@ async def run_bmo():
         {
             "role": "user",
             # "content": f"You are talking to {name}. Greet them appropriately based on your relationship.",
-            #"new" version where bmo does not ask in hte beginning 
+            # "new" version where bmo does not ask in hte beginning
             "content": """You just woke up. 
                         You assume the person sitting at the computer is your creator, Margo, but you aren't completely sure. 
-                        Say hi and playfully ask who is there to confirm."""
+                        Say hi and playfully ask who is there to confirm.""",
         },
     ]
     # LLMClient.chat is blocking — run in thread so the event loop stays free
     opening = await asyncio.to_thread(llm_client.chat, opening_prompt)
     print_bmo(opening)
 
-    #new part
+    # new part
     # bmo_greeting = llm_client.chat(opening_prompt)
     # print_bmo(bmo_greeting)
 
@@ -89,33 +88,35 @@ async def run_bmo():
         {
             "role": "system",
             "content": """Extract the name of the person introducing themselves. 
-            If they say 'It's Margo', return 'Margo'. If they don't give a name or you can't tell, return 'Stranger'. Return ONLY the name, nothing else."""
+            If they say 'It's Margo', return 'Margo'. If they don't give a name or you can't tell, return 'Stranger'. Return ONLY the name, nothing else.""",
         },
-        {
-            "role": "user", "content":first_input
-        }
+        {"role": "user", "content": first_input},
     ]
 
-    extracted_name = (await asyncio.to_thread(llm_client.chat, extraction_prompt)).strip()
+    extracted_name = (
+        await asyncio.to_thread(llm_client.chat, extraction_prompt)
+    ).strip()
     # Clean up any weird punctuation the LLM might add
     extracted_name = extracted_name.strip(".,!'\"")
 
-    #creates user and start db sesion 
+    # creates user and start db sesion
     user_id = await memory_system.get_or_create_user(extracted_name)
-    conversation_id = await memory_system.start_session(mood=baseline_mood, user_id=user_id)
+    conversation_id = await memory_system.start_session(
+        mood=baseline_mood, user_id=user_id
+    )
 
-    #log first exchanged and short-term into database
+    # log first exchanged and short-term into database
     short_term_memory.add("BMO", opening)
     short_term_memory.add("user", first_input)
     await memory_system.save_chat_message(conversation_id, "BMO", opening)
     await memory_system.save_chat_message(conversation_id, "user", first_input)
 
-    #check who it is 
+    # check who it is
     relevant_memories = bmo_memory.search_context(first_input)
     bmo_thought = await memory_system.fetch_bmos_thoughts(user_id=user_id)
 
     messages = prompt_builder.build(
-        history = short_term_memory.get_history(),
+        history=short_term_memory.get_history(),
         memories=relevant_memories,
         bmo_thought=bmo_thought,
     )
@@ -125,8 +126,7 @@ async def run_bmo():
     await memory_system.save_chat_message(conversation_id, "BMO", reaction)
     print_bmo(reaction)
 
-
-#the older part (need to just remeber incase something is off or i regret)
+    # the older part (need to just remeber incase something is off or i regret)
     while True:
         try:
             user_input = input("\n[You]: ").strip()

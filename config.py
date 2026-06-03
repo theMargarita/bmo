@@ -8,7 +8,7 @@ MODEL = "llama3.2"
 
 # small offline emmbedding model
 # Alternative: "BAAI/bge-small-en-v1.5" — slightly better, still small
-EMBEDDING_MODEL = "all-MiniLM-L6-v2" # or "nomic-embed-text"'
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # or "nomic-embed-text"'
 
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
@@ -28,4 +28,3 @@ IDENTITY_FILE = "data/identity.json"
 # Database path (used later when we add long-term memory)
 DB_PATH = "data/bmo_memory.db"
 CHROMA_PATH = "data/chroma"
-

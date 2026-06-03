@@ -7,6 +7,7 @@ from brain.llm import LLMClient
 from config import CHROMA_PATH
 from memory.bmos_memory import BMOsMemory
 from memory.chunker import Chunker
+
 # from chromadb.utils import embedding_functions
 from memory.embedder import Embedder
 
@@ -23,7 +24,7 @@ class BMOMemoryAsync(BMOsMemory):
         self = cls()
         self.db_path = db_path
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        self.llm = await asyncio.to_thread(LLMClient)   # construct off-loop if blocking
+        self.llm = await asyncio.to_thread(LLMClient)  # construct off-loop if blocking
         self.chroma = await asyncio.to_thread(chromadb.PersistentClient, CHROMA_PATH)
         # self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(model_name="nomic-embed-text")
         self.embedder = await asyncio.to_thread(Embedder)
@@ -108,7 +109,6 @@ class BMOMemoryAsync(BMOsMemory):
         except Exception as e:
             print(f"Could not update user: {e}")
 
-   
     async def fetch_bmos_thoughts(self, user_id: int) -> dict:
         bmo_thoughts = {
             "user_context": "",
@@ -239,52 +239,52 @@ class BMOMemoryAsync(BMOsMemory):
         llm_response = await asyncio.to_thread(self.llm.chat, messages)
 
         try:
-                # Strip markdown fences if the LLM includes them
-                clean_response = (
-                    llm_response.strip()
-                    .removeprefix("```json")
-                    .removeprefix("```")
-                    .removesuffix("```")
-                    .strip()
-                )
-                new_data = json.loads(clean_response)
-                new_facts = new_data.get("updated_facts")
-                if isinstance(new_facts, (dict, list)):
-                    new_facts = json.dumps(new_facts)
-                else:
-                    new_facts = str(new_facts) if new_facts else "No new facts recorded"
+            # Strip markdown fences if the LLM includes them
+            clean_response = (
+                llm_response.strip()
+                .removeprefix("```json")
+                .removeprefix("```")
+                .removesuffix("```")
+                .strip()
+            )
+            new_data = json.loads(clean_response)
+            new_facts = new_data.get("updated_facts")
+            if isinstance(new_facts, (dict, list)):
+                new_facts = json.dumps(new_facts)
+            else:
+                new_facts = str(new_facts) if new_facts else "No new facts recorded"
 
-                new_perception = json.dumps(new_data.get("updated_perception"))
-                if isinstance(new_perception, (dict, list)):
-                    new_perception = json.dumps(new_perception) 
-                else:
-                    new_perception = str(new_perception) if new_perception else {}
-                summary = new_data.get("conversation_summary", "No summary provided.")
-                valence = new_data.get("emotional_valence", "Neutral")
-                core_memories = new_data.get("new_core_memories", [])
+            new_perception = json.dumps(new_data.get("updated_perception"))
+            if isinstance(new_perception, (dict, list)):
+                new_perception = json.dumps(new_perception)
+            else:
+                new_perception = str(new_perception) if new_perception else {}
+            summary = new_data.get("conversation_summary", "No summary provided.")
+            valence = new_data.get("emotional_valence", "Neutral")
+            core_memories = new_data.get("new_core_memories", [])
 
-                async with aiosqlite.connect(self.db_path) as conn:
-                    await conn.execute(
-                        """UPDATE users
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute(
+                    """UPDATE users
                         SET facts = ?, bmo_perception = ?, last_interaction = CURRENT_TIMESTAMP
                         WHERE id = ?""",
-                        (new_facts, new_perception, user_id),
-                    )
-                    await conn.commit()
-            # ending session - start processing new memory
-                await asyncio.to_thread(self.end_session, conversation_id, summary)
-
-                self.update_bmo_state(
-                    event="end_session_consolidation",
-                    status="resting",
-                    mood=valence,
-                    detail=f"Processed session summary: {summary}",
+                    (new_facts, new_perception, user_id),
                 )
+                await conn.commit()
+            # ending session - start processing new memory
+            await asyncio.to_thread(self.end_session, conversation_id, summary)
 
-                for memory_text in core_memories:
-                    await asyncio.to_thread(self.save, memory_text, "Chat Consolidation", 8)
+            self.update_bmo_state(
+                event="end_session_consolidation",
+                status="resting",
+                mood=valence,
+                detail=f"Processed session summary: {summary}",
+            )
 
-                print("BMO safely stored new memories!")
+            for memory_text in core_memories:
+                await asyncio.to_thread(self.save, memory_text, "Chat Consolidation", 8)
+
+            print("BMO safely stored new memories!")
 
         except json.JSONDecodeError:
             print("Oops! BMO's thoughts were too chaotic to parse this time.")
