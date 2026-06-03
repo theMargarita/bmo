@@ -1,9 +1,9 @@
 from brain.personality import get_system_prompt
 from memory.bmo_memory_async import BMOMemoryAsync
 from memory.identity import Identity
+
 # from memory.bmos_memory import BMOsMemory
 from config import MAX_HISTORY
-
 
 
 class PromptBuilder:
@@ -12,7 +12,7 @@ class PromptBuilder:
         self.memory_system = memory_system
 
     def build(
-        self, history, memories,bmo_thought, game_context: str = None
+        self, history, memories, bmo_thought, game_context: str = None
     ) -> list[dict]:
         messages = []
         # core system prompt with personality and mood
