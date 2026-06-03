@@ -8,7 +8,9 @@ MODEL = "llama3.2"
 
 # small offline emmbedding model
 # Alternative: "BAAI/bge-small-en-v1.5" — slightly better, still small
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL = "all-MiniLM-L6-v2" # or "nomic-embed-text"'
+
+RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 # Ollama runs locally — no API key needed
 OLLAMA_URL = "http://localhost:11434"

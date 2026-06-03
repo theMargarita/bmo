@@ -1,31 +1,32 @@
 import os
 import uuid
 import sqlite3
+
+from sentence_transformers import CrossEncoder
 from brain.llm import LLMClient
 import chromadb
-from chromadb.utils import embedding_functions
 from memory.chunker import Chunker
 
 from config import CHROMA_PATH
+from memory.embedder import Embedder
+from memory.importance_score import calculate_importance
 
 class BMOsMemory:
     def __init__(self, db_path="data/bmo_memory.db"):
         self.db_path = db_path
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.llm = LLMClient()
-        # self.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+        model_path = "./models/ms-marco-MiniLM-L-6-v2"
+        self.reranker = CrossEncoder(model_path)
         self.chunker = Chunker(chunk_size=200, overlap=15)
-
+        self.embedder = Embedder()
+        self.reranker = self.embedder.reranker 
         # chroma setup
         self.chroma = chromadb.PersistentClient(CHROMA_PATH)
-
-        self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(
-            model_name="nomic-embed-text"
-        )
-
+        # Chroma will use your __call__ method automatically.
         self.collection = self.chroma.get_or_create_collection(
             name="bmo_memories",
-            embedding_function=self.embedding_fu,
+            embedding_function=self.embedder, 
             metadata={"hnsw:space": "cosine"},
         )
 
@@ -106,11 +107,26 @@ class BMOsMemory:
 
 
     # Saving 'core' memories
-    def save(self, content: str, source: str, importance: int = 0, tags: list = None):
+    def save(self, content: str, source: str, importance: int = None, tags: list = None):
         try:
+            if importance is None:
+                importance = calculate_importance(content)
+
             chunks = self.chunker.chunk_text_with_overlap(content)
+            embeddings = self.model.encode(chunks).tolist()
+
+            ids = [str(uuid.uuid4()) for _ in chunks]
+            metadatas = [{"aource": source, "importance": importance} for _ in chunks]
+
+            self.collection.add(
+                documents=chunks,
+                embeddings=embeddings,
+                ids=ids,
+                metadatas=metadatas
+            )
+
             for c in chunks:
-                chroma_id = str(uuid.uuid4())
+                # chroma_id = str(uuid.uuid4())
                 entry_source = source
                 if tags:
                     entry_source = f"{source} | tags: {','.join(tags)}"
@@ -121,7 +137,7 @@ class BMOsMemory:
                         cursor = connection.cursor()
                         cursor.execute(
                             "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?,?)",
-                            (c, entry_source, importance, chroma_id),
+                            (c, entry_source, importance, ids), #used to be chroma id
                         )
                         connection.commit()
                 except sqlite3.Error as db_err:
@@ -132,11 +148,11 @@ class BMOsMemory:
                 try:
                     self.collection.add(
                         documents=[c],
-                        ids=[chroma_id],
+                        ids=[ids],
                         metadatas=[{"source": entry_source, "importance": importance}],
                     )
                 except Exception as ch_err:
-                    print(f"Chroma add failed for chunk (id={chroma_id}): {ch_err}")
+                    print(f"Chroma add failed for chunk (id={ids}): {ch_err}")
         except Exception as e:
             print(f"Error saving memory: {e}")
 
@@ -200,12 +216,7 @@ class BMOsMemory:
             scored.sort(reverse=True)
             return [doc for _, doc in scored[:3]]
 
-            # if (
-            #     results
-            #     and results.get("documents")
-            #     and len(results["documents"][0]) > 0
-            # ):
-            #     return results["documents"][0]
         except Exception as e:
             print(f"Could not update user: {e}")
+            return []
 

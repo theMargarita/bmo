@@ -1,7 +1,7 @@
 import re
 
 class Chunker:
-    def  __init__(self, chunk_size, int = 80, overlap: int = 15):
+    def  __init__(self, chunk_size: int = 80, overlap: int = 15):
         # chunk_size: words per chunk
         # overlap: words shared between consecutive chunks
         # overlap prevents losing meaning at chunk boundaries
@@ -44,8 +44,3 @@ class Chunker:
             chunks.append(" ".join(current_chunk))
 
         return chunks
-        # words = text.split()
-        # return [
-        #     " ".join(words[i:i + chunck_size])
-        #     for i in range(0, len(words), chunck_size)
-        # ]

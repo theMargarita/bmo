@@ -1,5 +1,4 @@
 import asyncio
-from dbm import sqlite3
 import json
 import os
 import aiosqlite
@@ -26,7 +25,7 @@ class BMOMemoryAsync:
         self.chroma = await asyncio.to_thread(chromadb.PersistentClient, CHROMA_PATH)
         self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(model_name="nomic-embed-text")
         self.collection = await asyncio.to_thread(self.chroma.get_or_create_collection, name="bmo_memories", embedding_function=self.embedding_fu)
-        self.chunker = Chunker.chunk(chunk_size=200, opverlap=15)
+        self.chunker = Chunker(chunk_size=200, opverlap=15)
         return self
 
     async def start_session(self, mood: str, user_id: int = 1) -> int:
@@ -92,7 +91,7 @@ class BMOMemoryAsync:
                         (updated_facts, bmo_perception_json, user_id),
                     )
                     await conn.commit()
-            return cursor.fetchall()
+                    return cursor.fetchall()
         except Exception as e:
             print(f"Could not update user: {e}")
 
@@ -141,46 +140,49 @@ class BMOMemoryAsync:
             return row[0] if row else None
 
     async def get_or_create_user(self, name: str) -> int:
-        async with aiosqlite.connect(self.db_path) as connection:
-            cursor = await connection.execute(
-                "SELECT id FROM users WHERE name = ?", (name,)
-            )
-            row = await cursor.fetchone()
-            if row:
-                return row[0]
+        try:
+            async with aiosqlite.connect(self.db_path) as connection:
+                cursor = await connection.execute(
+                    "SELECT id FROM users WHERE name = ?", (name,)
+                )
+                row = await cursor.fetchone()
+                if row:
+                    return row[0]
 
-            # Look up role_id on the SAME connection instead of opening a new one
-            cursor = await connection.execute(
-                "SELECT id FROM roles WHERE name = ?", ("Acquaintance",)
-            )
-            role_row = await cursor.fetchone()
-            default_role_id = role_row[0] if role_row else None
+                # Look up role_id on the SAME connection instead of opening a new one
+                cursor = await connection.execute(
+                    "SELECT id FROM roles WHERE name = ?", ("Acquaintance",)
+                )
+                role_row = await cursor.fetchone()
+                default_role_id = role_row[0] if role_row else None
 
-            if default_role_id is None:
-                print(
-                    "[Warning] 'Acquaintance' role not found — did seed_database() run?"
+                if default_role_id is None:
+                    print(
+                        "[Warning] 'Acquaintance' role not found — did seed_database() run?"
+                    )
+
+                initial_perception = json.dumps(
+                    {
+                        "connection_to_owner": "unknown",
+                        "bmo_feelings_toward_them": "neutral, just met",
+                        "trust_level": 3,
+                        "inside_jokes": [],
+                    }
                 )
 
-            initial_perception = json.dumps(
-                {
-                    "connection_to_owner": "unknown",
-                    "bmo_feelings_toward_them": "neutral, just met",
-                    "trust_level": 3,
-                    "inside_jokes": [],
-                }
-            )
-
-            cursor = await connection.execute(
-                "INSERT INTO users (name, facts, role_id, bmo_perception) VALUES (?,?,?,?)",
-                (
-                    name,
-                    "A new person BMO has just met.",
-                    default_role_id,
-                    initial_perception,
-                ),
-            )
-            await connection.commit()
-            return cursor.lastrowid
+                cursor = await connection.execute(
+                    "INSERT INTO users (name, facts, role_id, bmo_perception) VALUES (?,?,?,?)",
+                    (
+                        name,
+                        "A new person BMO has just met.",
+                        default_role_id,
+                        initial_perception,
+                    ),
+                )
+                await connection.commit()
+                return cursor.lastrowid
+        except json.JSONDecodeError:
+            print("Something went wrong with function get_or_creat_user")
 
     async def consolidate_bmo(
         self, user_id: int, conversation_id: int, recent_messages: str
@@ -258,23 +260,6 @@ class BMOMemoryAsync:
                 await conn.commit()
             # ending session - start processing new memory
                 await asyncio.to_thread(self.end_session, conversation_id, summary)
-                with sqlite3.connect(self.db_path) as conn:
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        """
-                        UPDATE users 
-                        SET facts = ?, bmo_perception = ?, last_interaction = CURRENT_TIMESTAMP 
-                        WHERE id = ?
-                        """,
-                        (
-                            new_facts,
-                            new_perception,
-                            user_id,
-                        ),
-                    )
-                    conn.commit()
-                    # ending session - start processing new memory
-                    self.end_session(conversation_id, summary)
 
                 self.update_bmo_state(
                     event="end_session_consolidation",
