@@ -8,7 +8,6 @@ from memory.bmo_memory_async import BMOMemoryAsync
 from memory.short_term import ShortTermMemory
 from memory.identity import Identity
 from brain.personality import get_system_prompt
-from memory.bmos_memory import BMOsMemory
 
 
 def print_bmo(text: str):
@@ -27,11 +26,9 @@ async def run_bmo():
     identity = Identity()
     identity.auto_shift_mood()
 
-    bmo_memory = BMOsMemory(db_path=DB_PATH)
-    bmo_memory.seed_database(owner_name="Margo")  # sync — fine at startup
-    # memory_system = BMOMemoryAsync()
     memory_system = await BMOMemoryAsync.create(db_path=DB_PATH)
-    memory_system.sync = bmo_memory
+    bmo_memory = memory_system.sync
+    bmo_memory.seed_database(owner_name="Margo")  # sync — fine at startup
 
     llm_client = LLMClient()
     short_term_memory = ShortTermMemory()

@@ -12,12 +12,18 @@ from memory.embedder import Embedder
 from memory.importance_score import calculate_importance
 
 class BMOsMemory:
-    def __init__(self, db_path="data/bmo_memory.db", chroma_collection=None):
+    def __init__(
+        self,
+        db_path="data/bmo_memory.db",
+        chroma_collection=None,
+        embedder: Embedder | None = None,
+        llm_client: LLMClient | None = None,
+    ):
         self.db_path = db_path
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        self.llm = LLMClient()
+        self.llm = llm_client or LLMClient()
         self.chunker = Chunker(chunk_size=200, overlap=15)
-        self.embedder = Embedder()
+        self.embedder = embedder or Embedder()
         self.reranker = self.embedder.reranker
 
         if chroma_collection is not None:
@@ -123,10 +129,11 @@ class BMOsMemory:
             # Generate distinct unique IDs for each chunk
             ids = [str(uuid.uuid4()) for _ in chunks]
             metadatas = [{"source": entry_source, "importance": importance} for _ in chunks]
+            embeddings = self.embedder.embed_batch(chunks)
 
-            # Chroma uses self.embedder automatically to handle SentenceTransformers!
             self.collection.add(
                 documents=chunks,
+                embeddings=embeddings,
                 ids=ids,
                 metadatas=metadatas
             )
@@ -135,8 +142,8 @@ class BMOsMemory:
                 cursor = connection.cursor()
                 for id, single_chunk in zip(ids, chunks):
                     cursor.execute(
-                        "INSERT INTO memories (content, source, importance, chroma_id) VALUES (?,?,?,?)",
-                        (single_chunk, entry_source, importance, id),
+                        "INSERT INTO memories (content, source, chroma_id, importance) VALUES (?,?,?,?)",
+                        (single_chunk, entry_source, id, importance),
                     )
                 connection.commit()
                 #

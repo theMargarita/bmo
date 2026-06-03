@@ -27,7 +27,17 @@ class BMOMemoryAsync(BMOsMemory):
         self.chroma = await asyncio.to_thread(chromadb.PersistentClient, CHROMA_PATH)
         # self.embedding_fu = embedding_functions.OllamaEmbeddingFunction(model_name="nomic-embed-text")
         self.embedder = await asyncio.to_thread(Embedder)
-        self.collection = await asyncio.to_thread(self.chroma.get_or_create_collection, name="bmo_memories", embedding_function=self.embedder)
+        self.collection = await asyncio.to_thread(
+            self.chroma.get_or_create_collection,
+            name="bmo_memories",
+            embedding_function=self.embedder,
+        )
+        self.sync = BMOsMemory(
+            db_path=self.db_path,
+            chroma_collection=self.collection,
+            embedder=self.embedder,
+            llm_client=self.llm,
+        )
         self.chunker = Chunker(chunk_size=200, overlap=15)
         return self
 
