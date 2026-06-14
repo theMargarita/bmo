@@ -1,8 +1,8 @@
 import asyncio
 import json
 import os
-import aiosqlite
-import chromadb
+import aiosqlite # type: ignore
+import chromadb # type: ignore
 from brain.llm import LLMClient
 from config import CHROMA_PATH
 from memory.bmos_memory import BMOsMemory

@@ -4,7 +4,7 @@ import sqlite3
 
 # from sentence_transformers import CrossEncoder
 from brain.llm import LLMClient
-import chromadb
+import chromadb # type: ignore
 from memory.chunker import Chunker
 
 from config import CHROMA_PATH
