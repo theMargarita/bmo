@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import chromadb
 from memory.bmos_memory import BMOsMemory
 
+
 class FakeEmbedder(chromadb.EmbeddingFunction):
     """Deterministic embedder – no network / model required."""
 
@@ -105,6 +106,7 @@ def _build_mem(db_path: str, coll) -> BMOsMemory:
     mem.chunker.chunk_text_with_overlap.side_effect = lambda text: [text]
     return mem
 
+
 @pytest.fixture()
 def real_env(tmp_path):
     """Real SQLite + real ChromaDB – used by integration tests."""
@@ -138,8 +140,10 @@ def unit_mem(tmp_path):
 
 """""
 Unit tests
-"""""
+""" ""
 """ChromaDB is mocked."""
+
+
 class TestSaveMemoryUnit:
     def test_save_returns_without_error(self, unit_mem):
         _, _, mem = unit_mem
@@ -149,7 +153,9 @@ class TestSaveMemoryUnit:
         db_path, _, mem = unit_mem
         mem.save("chocolate is delicious", source="unit_test", importance=3)
         with sqlite3.connect(db_path) as conn:
-            rows = conn.execute("SELECT content, source, importance FROM memories").fetchall()
+            rows = conn.execute(
+                "SELECT content, source, importance FROM memories"
+            ).fetchall()
         assert len(rows) == 1
         assert rows[0][0] == "chocolate is delicious"
         assert rows[0][1] == "unit_test"
@@ -175,7 +181,10 @@ class TestSaveMemoryUnit:
             row = conn.execute("SELECT importance FROM memories").fetchone()
         assert row[0] == 10
 
+
 """ChromaDB is mocked."""
+
+
 class TestSearchContextUnit:
     def test_returns_list(self, unit_mem):
         _, _, mem = unit_mem
@@ -184,12 +193,18 @@ class TestSearchContextUnit:
 
     def test_empty_collection_returns_empty(self, unit_mem):
         _, mock_coll, mem = unit_mem
-        mock_coll.query.return_value = {"documents": [[]], "distances": [[]], "ids": [[]]}
+        mock_coll.query.return_value = {
+            "documents": [[]],
+            "distances": [[]],
+            "ids": [[]],
+        }
         results = mem.search_context("nothing here", n=5)
         assert results == [] or isinstance(results, list)
 
 
 """Tests for save_conversations() and end_session()."""
+
+
 class TestConversationsUnit:
     def test_save_conversations_returns_id(self, unit_mem):
         db_path, _, mem = unit_mem
@@ -206,7 +221,9 @@ class TestConversationsUnit:
 
     def test_save_conversations_with_summary(self, unit_mem):
         db_path, _, mem = unit_mem
-        conv_id = mem.save_conversations(user_id=2, message="Hi", summary="Initial summary")
+        conv_id = mem.save_conversations(
+            user_id=2, message="Hi", summary="Initial summary"
+        )
         with sqlite3.connect(db_path) as conn:
             row = conn.execute(
                 "SELECT summary FROM conversations WHERE id=?", (conv_id,)
@@ -258,6 +275,7 @@ class TestBMOStateUnit:
         assert isinstance(mem.get_bmo_state(), dict)
 
     """get_bmo_state should handle empty table gracefully."""
+
     def test_get_state_before_any_update(self, unit_mem):
         _, _, mem = unit_mem
         state = mem.get_bmo_state()
@@ -273,6 +291,8 @@ class TestBMOStateUnit:
 
 
 """Tests for seed_database()."""
+
+
 class TestSeedDatabaseUnit:
     def test_seed_creates_roles(self, unit_mem):
         db_path, _, mem = unit_mem
@@ -290,7 +310,7 @@ class TestSeedDatabaseUnit:
             ).fetchone()
         assert row is not None
 
-    #Calling seed twice should not raise and should not duplicate owner
+    # Calling seed twice should not raise and should not duplicate owner
     def test_seed_idempotent(self, unit_mem):
         db_path, _, mem = unit_mem
         mem.seed_database(owner_name="Bob")
@@ -321,7 +341,7 @@ class TestCountUnit:
         assert mem.count() == 42
 
 
-#Sanity-check the shared test utility
+# Sanity-check the shared test utility
 class TestFakeEmbedder:
     def test_embed_length(self):
         e = FakeEmbedder(dim=8)

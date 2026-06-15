@@ -7,11 +7,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest_asyncio
 from memory.bmo_memory_async import BMOMemoryAsync
 
+
 @pytest.mark.asyncio
 async def test_start_session_and_saves():
     mem = BMOMemoryAsync()
     mem.sync = MagicMock()
-    mem.save_conversation = AsyncMock(return_value=42)  
+    mem.save_conversation = AsyncMock(return_value=42)
 
     result = await mem.start_session("Curious", 2)
 
@@ -26,6 +27,7 @@ async def test_start_session_and_saves():
         2, "Session started.\nBMO's mood: Curious"
     )
     assert result == 42
+
 
 @pytest_asyncio.fixture
 async def temp_db(tmp_path):
@@ -71,11 +73,14 @@ async def temp_db(tmp_path):
 
     return str(db_path)
 
+
 @pytest.mark.asyncio
 async def test_save_conversation_round_trip(temp_db):
-    with patch("brain.llm.LLMClient"), \
-         patch("chromadb.PersistentClient"), \
-         patch("memory.embedder.Embedder"):
+    with (
+        patch("brain.llm.LLMClient"),
+        patch("chromadb.PersistentClient"),
+        patch("memory.embedder.Embedder"),
+    ):
         memory = await BMOMemoryAsync.create(db_path=temp_db)
 
     conversation_id = await memory.save_conversation(1, "Hello", "Greeting")
@@ -125,10 +130,15 @@ async def test_consolidate_bmo_updates_db_and_calls_side_effects(tmp_path):
     # Mock LLM to return a JSON string the method expects
     llm_response = {
         "updated_facts": "Learned that they like tea.",
-        "updated_perception": {"connection_to_owner": "friend", "bmo_feelings_toward_them": "warm", "trust_level": 7, "inside_jokes": []},
+        "updated_perception": {
+            "connection_to_owner": "friend",
+            "bmo_feelings_toward_them": "warm",
+            "trust_level": 7,
+            "inside_jokes": [],
+        },
         "conversation_summary": "Talked about tea and coding.",
         "emotional_valence": "Positive",
-        "new_core_memories": ["They prefer green tea."]
+        "new_core_memories": ["They prefer green tea."],
     }
     memory.llm = MagicMock()
     memory.llm.chat = MagicMock(return_value=json.dumps(llm_response))
@@ -139,11 +149,15 @@ async def test_consolidate_bmo_updates_db_and_calls_side_effects(tmp_path):
     memory.save = MagicMock()
 
     # Run consolidation
-    await memory.consolidate_bmo(user_id=1, conversation_id=42, recent_messages="User: I love tea. BMO: Nice!")
+    await memory.consolidate_bmo(
+        user_id=1, conversation_id=42, recent_messages="User: I love tea. BMO: Nice!"
+    )
 
     # Assert DB was updated with the new facts and perception
     async with aiosqlite.connect(db_path) as conn:
-        cursor = await conn.execute("SELECT facts, bmo_perception FROM users WHERE id = ?", (1,))
+        cursor = await conn.execute(
+            "SELECT facts, bmo_perception FROM users WHERE id = ?", (1,)
+        )
         row = await cursor.fetchone()
 
     assert row is not None
@@ -157,6 +171,6 @@ async def test_consolidate_bmo_updates_db_and_calls_side_effects(tmp_path):
         event="end_session_consolidation",
         status="resting",
         mood="Positive",
-        detail="Processed session summary: Talked about tea and coding."
+        detail="Processed session summary: Talked about tea and coding.",
     )
     memory.save.assert_called_with("They prefer green tea.", "Chat Consolidation", 8)
