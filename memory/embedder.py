@@ -5,13 +5,23 @@ from config import EMBEDDING_MODEL, RERANKER_MODEL
 
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_DATASETS_OFFLINE"] = "1"
+os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 
 class Embedder(EmbeddingFunction):
     def __init__(self):
-        self.model = SentenceTransformer(EMBEDDING_MODEL, cache_folder="./models")
-        self.reranker = CrossEncoder(RERANKER_MODEL, cache_folder="./models")
+        self.model = SentenceTransformer(
+            EMBEDDING_MODEL,
+            cache_folder="./models",
+            local_files_only=True,
+        )
+        self.reranker = CrossEncoder(
+            RERANKER_MODEL,
+            cache_folder="./models",
+            local_files_only=True,
+        )
 
     def embed(self, text: str) -> list[float]:
         return self.model.encode(text, convert_to_numpy=True).tolist()
