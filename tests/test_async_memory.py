@@ -11,7 +11,7 @@ from memory.bmo_memory_async import BMOMemoryAsync
 async def test_start_session_and_saves():
     mem = BMOMemoryAsync()
     mem.sync = MagicMock()
-    mem.save_conversation = AsyncMock(return_value=42)   # <- corrected name
+    mem.save_conversation = AsyncMock(return_value=42)  
 
     result = await mem.start_session("Curious", 2)
 
