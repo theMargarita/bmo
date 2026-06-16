@@ -13,3 +13,4 @@ aiosqlite>=0.20.0
 # openai-whisper
 # pyttsx3
 # pyaudio
+
