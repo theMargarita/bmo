@@ -24,7 +24,7 @@ async def test_start_session_and_saves():
     mem.save_conversation.assert_awaited_once_with(
         2, "Session started.\nBMO's mood: Curious"
     )
-    assert result == 42
+    assert result == 42 
 
 
 @pytest_asyncio.fixture
