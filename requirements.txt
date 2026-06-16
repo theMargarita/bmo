@@ -9,6 +9,7 @@ pre-commit>=3.7.0
 chromadb>=0.5.0
 sentence-transformers>=3.0.0
 aiosqlite>=0.20.0
+pytest-asyncio>=0.23.0
 # Added later when building voice:
 # openai-whisper
 # pyttsx3

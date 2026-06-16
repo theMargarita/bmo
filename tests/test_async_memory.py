@@ -1,9 +1,8 @@
 import json
 import aiosqlite
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-
-# import pytest_asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+import pytest_asyncio
 from memory.bmo_memory_async import BMOMemoryAsync
 
 
@@ -28,7 +27,7 @@ async def test_start_session_and_saves():
     assert result == 42
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def temp_db(tmp_path):
     db_path = tmp_path / "bmo.db"
 
@@ -73,25 +72,25 @@ async def temp_db(tmp_path):
     return str(db_path)
 
 
-# @pytest.mark.asyncio
-# async def test_save_conversation_round_trip(temp_db):
-#     with (
-#         patch("brain.llm.LLMClient"),
-#         patch("chromadb.PersistentClient"),
-#         patch("memory.embedder.Embedder"),
-#     ):
-#         memory = await BMOMemoryAsync.create(db_path=temp_db)
+@pytest.mark.asyncio
+async def test_save_conversation_round_trip(temp_db):
+    with (
+        patch("brain.llm.LLMClient"),
+        patch("chromadb.PersistentClient"),
+        patch("memory.embedder.Embedder"),
+    ):
+        memory = await BMOMemoryAsync.create(db_path=temp_db)
 
-#     conversation_id = await memory.save_conversation(1, "Hello", "Greeting")
+    conversation_id = await memory.save_conversation(1, "Hello", "Greeting")
 
-#     async with aiosqlite.connect(temp_db) as conn:
-#         cursor = await conn.execute(
-#             "SELECT user_id, message, summary FROM conversations WHERE id = ?",
-#             (conversation_id,),
-#         )
-#         row = await cursor.fetchone()
+    async with aiosqlite.connect(temp_db) as conn:
+        cursor = await conn.execute(
+            "SELECT user_id, message, summary FROM conversations WHERE id = ?",
+            (conversation_id,),
+        )
+        row = await cursor.fetchone()
 
-#     assert row == (1, "Hello", "Greeting")
+    assert row == (1, "Hello", "Greeting")
 
 
 @pytest.mark.asyncio
