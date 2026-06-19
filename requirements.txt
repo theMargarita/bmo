@@ -1,16 +1,29 @@
-# requirements.txt
 # Install everything with: pip install -r requirements.txt
 
+# Core LLM & Ollama
 ollama>=0.2.0
+langchain==1.0.3
+langchain-ollama==1.0.0
+
+# Memory & Vector Database
+chromadb>=0.5.0
+aiosqlite>=0.20.0
+sentence-transformers>=3.0.0
+
+# Environment & Config
 python-dotenv>=1.0.0
+
+# Testing
 pytest>=8.0.0
+pytest-asyncio>=0.23.0
+
+# Development & Code Quality
 ruff>=0.1.0
 pre-commit>=3.7.0
-chromadb>=0.5.0
-sentence-transformers>=3.0.0
-aiosqlite>=0.20.0
-# Added later when building voice:
-# openai-whisper
-# pyttsx3
-# pyaudio
+# black>=23.0.0
+# mypy>=1.0.0
 
+# Optional: For future voice support
+# openai-whisper>=20231117
+# pyttsx3>=2.90
+# pyaudio>=0.2.13
