@@ -69,6 +69,7 @@ class BMOsMemory:
                 print(f"[Database] Default user '{owner_name}' created as User ID 1.")
 
     # chromadb har no async API so it stays sync
+    ##comments
     def count(self) -> int:
         try:
             return self.collection.count()
