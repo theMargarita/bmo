@@ -75,10 +75,41 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         );
     """
 
+    index_query = """
+        -- Conversations: fast lookup by user and date
+        CREATE INDEX IF NOT EXISTS idx_conversations_user_id 
+            ON conversations(user_id);
+        CREATE INDEX IF NOT EXISTS idx_conversations_created_at 
+            ON conversations(created_at DESC);
+        
+        -- Messages: fast lookup by conversation
+        CREATE INDEX IF NOT EXISTS idx_messages_conversation_id 
+            ON messages(conversation_id);
+        
+        -- Memories: fast retrieval by importance and date (for daily recalls)
+        CREATE INDEX IF NOT EXISTS idx_memories_created_at 
+            ON memories(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_memories_importance 
+            ON memories(importance DESC);
+        CREATE INDEX IF NOT EXISTS idx_memories_chroma_id 
+            ON memories(chroma_id);
+        
+        -- Users: fast lookup by name
+        CREATE INDEX IF NOT EXISTS idx_users_name 
+            ON users(name);
+        
+        -- BMO state: fast retrieval of recent state
+        CREATE INDEX IF NOT EXISTS idx_bmo_state_created_at 
+            ON bmo_state(last_updated DESC);
+    """
+
     # Execute the SQL commands to create the tables
     cursor.executescript(create_table_query)
+
+    cursor.executescript(index_query)
 
     # Commit the transaction
     connection.commit()
     print("Tables created successfully")
+    print("Indexes created successfully")
     print("Database setup complete.")
