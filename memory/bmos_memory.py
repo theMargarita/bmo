@@ -4,7 +4,7 @@ import sqlite3
 
 # from sentence_transformers import CrossEncoder
 from brain.llm import LLMClient
-import chromadb
+import chromadb  # type: ignore
 from memory.chunker import Chunker
 
 from config import CHROMA_PATH
@@ -38,7 +38,6 @@ class BMOsMemory:
                 metadata={"hnsw:space": "cosine"},
             )
 
-    # -----SYNC function-----
     def seed_database(self, owner_name="Creator"):
         # checks if roles exists, if not - hardcode
         with sqlite3.connect(self.db_path) as conn:
@@ -70,6 +69,7 @@ class BMOsMemory:
                 print(f"[Database] Default user '{owner_name}' created as User ID 1.")
 
     # chromadb har no async API so it stays sync
+    ##comments
     def count(self) -> int:
         try:
             return self.collection.count()

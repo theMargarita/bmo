@@ -44,8 +44,9 @@ memory/
 
 tests/
     __init__.py
-    test_short_term.py   # Tests for short-term memory
-    test.db.py           # Test database logic
+    test_async_memory.py  # Tests for async memory/session behavior
+    test_db.py            # Tests for SQLite + ChromaDB memory operations
+    test_short_term.py    # Tests for short-term memory logic
 ```
 
 ## How It Works

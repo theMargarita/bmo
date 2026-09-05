@@ -3,7 +3,6 @@ name: BMO CI
 on:
   push:
     branches: [dev]
-
   pull_request:
     branches: [main]
 
@@ -13,6 +12,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      PYTHONPATH: .
 
     steps:
       # 1. Checkout repository
@@ -31,23 +31,34 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      # 4. Install dependencies
+      # 4. Cache Hugging Face models
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ runner.os }}-hf-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-hf-
+
+      # 5. Install dependencies
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install pytest ruff==0.15.13 python-dotenv
+          pip install --upgrade -r requirements.txt
 
-      # 5. Create dummy data files
-      # - name: Create dummy data files
-      #   run: |
-      #     mkdir -p data
+      # 6. Download embedding model
+      # IMPORTANT: Replace model name if your code uses a different one.
+      - name: Download embedding model
+        run: |
+          python -c "
+          from sentence_transformers import SentenceTransformer
+          SentenceTransformer('all-MiniLM-L6-v2')
+          "
 
-      #     echo '{"mood":"curious","energy":"awake","current_goals":[],"beliefs_about_self":[],"things_i_find_interesting_lately":[],"last_updated":"2026-01-01"}' > data/identity.json
-
-      #     echo '{"name":"test","preferred_language":"auto","interests":[],"response_style":"direct","active_projects":[],"notes":"","relationship_started":"2026-05-01"}' > data/owner.json
-
-      # 6. Run Ruff
+      # 7. Run Ruff
       - name: Run Ruff
         run: |
           ruff check . --fix
@@ -55,12 +66,11 @@ jobs:
           ruff check .
           ruff format . --check
 
-      # 7. Run tests
+      # 8. Run tests
       - name: Run tests
-        env:
-          PYTHONPATH: .
         run: |
           pytest tests/ -v
+
   # #this part is for raspberry pi (that is not implemented yet)
   # deploy:
   #   needs: tests # only runs if tests pass
