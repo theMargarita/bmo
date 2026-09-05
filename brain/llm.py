@@ -7,23 +7,31 @@ class LLMClient:
         self.client = ollama.Client(host=OLLAMA_URL)
         self.model = MODEL
 
-    def chat(self, messages: list[dict]) -> str:
-        """
-        Send a list of messages to the model and return the response text.
+    # def chat(self, messages: list[dict]) -> str:
+    #     """
+    #     Send a list of messages to the model and return the response text.
 
-        messages format:
-        [
-            {"role": "system", "content": "..."},
-            {"role": "user",   "content": "..."},
-            {"role": "assistant", "content": "..."},
-            ...
-        ]
-        """
+    #     messages format:
+    #     [
+    #         {"role": "system", "content": "..."},
+    #         {"role": "user",   "content": "..."},
+    #         {"role": "assistant", "content": "..."},
+    #         ...
+    #     ]
+    #     """
+    #     try:
+    #         response = self.client.chat(model=self.model, messages=messages)
+    #         return response["message"]["content"]
+
+    #     except Exception as e:
+    #         print(f"Error during chat: {e}")
+    #         return "Sorry, I'm having trouble responding right now."
+
+    def chat(self, messages: list[dict]) -> str:
         try:
             response = self.client.chat(model=self.model, messages=messages)
             return response["message"]["content"]
-
-        except Exception as e:
+        except ollama.ResponseError as e:
             print(f"Error during chat: {e}")
             return "Sorry, I'm having trouble responding right now."
 
