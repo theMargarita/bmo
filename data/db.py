@@ -4,6 +4,7 @@ import sqlite3
 with sqlite3.connect("data/bmo_memory.db") as connection:
     cursor = connection.cursor()
     print("Database created and connected successfully")
+    
 
     # SQL commands with table descriptions
     create_table_query = """
@@ -72,6 +73,32 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
             mood TEXT, --good to know mood
             detail TEXT, --extra info if crash etc
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        --BMO identity table
+        -- Table: bmo_identiy
+        CREATE TABLE IF NOT EXISTS bmo_identity (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mood TEXT NOT NULL,
+            energy TEXT NOT NULL,
+            current_goals JSON NOT NULL, 
+            beliefs_about_self JSON NOT NULL, 
+            things_interesting JSON NOT NULL, 
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        --Owner profile
+        --Table: owner:profile
+        CREATE TABLE IF NOT EXISTS owner_profile(
+            id INTERGER PRIMARY KEY AUTOINCREMENT, 
+            name TEXT NOT NULL, 
+            prefered_language TEXT NOT NULL, 
+            interests JSON NOY NULL, 
+            expertise JSON NOT NULL,
+            favorite_stuff JSON NOT NULL, 
+            notes TEXT NOT NULL, 
+            relationship_started TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """
 
