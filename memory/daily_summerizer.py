@@ -1,3 +1,5 @@
+import aiosqlite
+
 from brain.llm import LLMClient
 from config import DB_PATH
 
@@ -23,9 +25,26 @@ class DailySummerizer:
             f"User: {conv['message']}" for conv in conversations
         )
 
-        summery = await self._summerize(convo_text)
+        summery = await self._summerize(convo_text) #message prompt for llm 
         if not summery:
             return None
 
         self._save_summery(memory_system, summery)
         return summery 
+
+    async def _get_today_conversations(self, user_id: int) -> list[dict]:
+        try: 
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute("""
+                    SELECT id, message, created_at
+                    FROM conversations
+                    WHERE user_id = ? AND created_at > datetime('now', '-1 day')
+                    ORDER BY created_at ASC
+                    """,
+                    (user_id),
+                )
+                rows = await cursor.fetchall()
+                return [{"id": r[0], "message": r[1], "created_at": r[2]} for r in rows]
+        except aiosqlite.Error as e:
+            print(f"[DailySummerizer] Error fetching conversations: {e}")
+            return []
