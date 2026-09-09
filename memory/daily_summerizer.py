@@ -1,3 +1,5 @@
+import asyncio
+
 import aiosqlite
 
 from brain.llm import LLMClient
@@ -21,11 +23,11 @@ class DailySummerizer:
             print("[DailySummerizer] No conversations to summerize today")
             return None
 
-        convo_text = "\n\n".join(
+        conversation_text = "\n\n".join(
             f"User: {conv['message']}" for conv in conversations
         )
 
-        summery = await self._summerize(convo_text) #message prompt for llm 
+        summery = await self._summerize(conversation_text) #message prompt for llm 
         if not summery:
             return None
 
@@ -48,3 +50,24 @@ class DailySummerizer:
         except aiosqlite.Error as e:
             print(f"[DailySummerizer] Error fetching conversations: {e}")
             return []
+
+    async def _summerize(self, conversation_text: str) -> str | None:
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You summarize a day's conversations between BMO and its "
+                    "companion in 2-3 sentences. Focus on what the user cared "
+                    "about, decisions made, emotional state, or recurring topics."
+                ),
+            },
+            {"role": "user", "content": conversation_text},
+        ]
+        try: 
+            summery = await asyncio.to_thread(self.llm.chat, messages)
+            return summery.strip() if summery else None
+        except Exception as e: #wont crash on quit
+            print (f"[DailySummarizer] Error during summarization: {e}")
+            return None
+
+    
