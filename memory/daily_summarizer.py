@@ -4,13 +4,13 @@ import aiosqlite
 
 from brain.llm import LLMClient
 from config import DB_PATH
-from memory.bmos_memory import BMOsMemory
+# from memory.bmos_memory import BMOsMemory
 from memory.importance_score import calculate_importance
 
 
 class DailySummarizer:
     def __init__(self, llm_client: LLMClient | None = None, db_path: str = DB_PATH):
-        self.llm = LLMClient() or llm_client
+        self.llm = llm_client or LLMClient()
         self.db_path = db_path
 
     async def summerize_and_save(self, memory_system, user_id: int = 1) -> str | None:
@@ -46,7 +46,7 @@ class DailySummarizer:
                     WHERE user_id = ? AND created_at > datetime('now', '-1 day')
                     ORDER BY created_at ASC
                     """,
-                    (user_id),
+                    (user_id,),
                 )
                 rows = await cursor.fetchall()
                 return [{"id": r[0], "message": r[1], "created_at": r[2]} for r in rows]
@@ -77,7 +77,7 @@ class DailySummarizer:
     #private function
     def _save_summary(self, memory_system, summary:str):
         importance = max(calculate_importance(summary), 6) #6 as mediocer importance
-        memory_system = BMOsMemory #added this for refenrence to bmomemory save
+        # memory_system = BMOsMemory() #added this for refenrence to bmomemory save
         memory_system.save(
             content=f"[Daily Summary] {summary}",
             source="daily_summary",
