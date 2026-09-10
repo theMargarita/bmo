@@ -5,6 +5,7 @@ from brain.llm import LLMClient
 from brain.prompt_builder import PromptBuilder
 from config import DB_PATH
 from memory.bmo_memory_async import BMOMemoryAsync
+
 # from memory.daily_summarizer import DailySummarizer
 from memory.short_term import ShortTermMemory
 from memory.identity import Identity

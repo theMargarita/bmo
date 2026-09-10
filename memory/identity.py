@@ -191,7 +191,9 @@ class Identity:
             lines.append(f"You have the following beliefs about yourself: {beliefs}")
         if i.get("things_interesting"):
             interests = "\n- " + "\n- ".join(i["things_interesting"])
-            lines.append(f"Some things you've found interesting lately are: {interests}")
+            lines.append(
+                f"Some things you've found interesting lately are: {interests}"
+            )
         if i.get("energy"):
             lines.append(f"Your current energy level is: {i['energy']}")
 

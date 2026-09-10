@@ -4,6 +4,7 @@ import aiosqlite
 
 from brain.llm import LLMClient
 from config import DB_PATH
+
 # from memory.bmos_memory import BMOsMemory
 from memory.importance_score import calculate_importance
 
@@ -19,9 +20,11 @@ class DailySummarizer:
         as a memory. Call this when a session ends (for now).
         Returns the summary text, or None if there was nothing to summarize.
         """
-        conversations = await self._get_todays_conversations(user_id) #function that will be created soon - to get todays convo
+        conversations = await self._get_todays_conversations(
+            user_id
+        )  # function that will be created soon - to get todays convo
 
-        if not conversations: 
+        if not conversations:
             print("[DailySummarizer] No conversations to summerize today")
             return None
 
@@ -29,18 +32,19 @@ class DailySummarizer:
             f"User: {conv['message']}" for conv in conversations
         )
 
-        summary = await self._summerize(conversation_text) #message prompt for llm 
+        summary = await self._summerize(conversation_text)  # message prompt for llm
         if not summary:
             return None
 
         self._save_summary(memory_system, summary)
-        return summary 
+        return summary
 
-    #private function
+    # private function
     async def _get_todays_conversations(self, user_id: int) -> list[dict]:
-        try: 
+        try:
             async with aiosqlite.connect(self.db_path) as conn:
-                cursor = await conn.execute("""
+                cursor = await conn.execute(
+                    """
                     SELECT id, message, created_at
                     FROM conversations
                     WHERE user_id = ? AND created_at > datetime('now', '-1 day')
@@ -54,7 +58,7 @@ class DailySummarizer:
             print(f"[DailySummarizer] Error fetching conversations: {e}")
             return []
 
-    #private function
+    # private function
     async def _summerize(self, conversation_text: str) -> str | None:
         messages = [
             {
@@ -67,16 +71,16 @@ class DailySummarizer:
             },
             {"role": "user", "content": conversation_text},
         ]
-        try: 
+        try:
             summary = await asyncio.to_thread(self.llm.chat, messages)
             return summary.strip() if summary else None
-        except Exception as e: #wont crash on quit
-            print (f"[DailySummarizer] Error during summarization: {e}")
+        except Exception as e:  # wont crash on quit
+            print(f"[DailySummarizer] Error during summarization: {e}")
             return None
 
-    #private function
-    def _save_summary(self, memory_system, summary:str):
-        importance = max(calculate_importance(summary), 6) #6 as mediocer importance
+    # private function
+    def _save_summary(self, memory_system, summary: str):
+        importance = max(calculate_importance(summary), 6)  # 6 as mediocer importance
         # memory_system = BMOsMemory() #added this for refenrence to bmomemory save
         memory_system.save(
             content=f"[Daily Summary] {summary}",

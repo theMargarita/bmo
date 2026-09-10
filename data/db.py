@@ -4,7 +4,6 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
     connection.execute("PRAGMA foreign_keys = ON")
     cursor = connection.cursor()
     print("Database created and connected successfully")
-    
 
     # SQL commands with table descriptions
     create_table_query = """
