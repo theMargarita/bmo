@@ -1,7 +1,7 @@
 import sqlite3
 
-# The 'with' statement automatically handles closing the connection when done!
 with sqlite3.connect("data/bmo_memory.db") as connection:
+    connection.execute("PRAGMA foreign_keys = ON")
     cursor = connection.cursor()
     print("Database created and connected successfully")
     
@@ -88,11 +88,11 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         );
 
         --Owner profile
-        --Table: owner:profile
+        --Table: owner_profile
         CREATE TABLE IF NOT EXISTS owner_profile(
-            id INTERGER PRIMARY KEY AUTOINCREMENT, 
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
             name TEXT NOT NULL, 
-            prefered_language TEXT NOT NULL, 
+            preferred_language TEXT NOT NULL, 
             interests JSON NOY NULL, 
             expertise JSON NOT NULL,
             favorite_stuff JSON NOT NULL, 
@@ -128,6 +128,14 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         -- BMO state: fast retrieval of recent state
         CREATE INDEX IF NOT EXISTS idx_bmo_state_created_at 
             ON bmo_state(last_updated DESC);
+
+        -- Owner profile: fast retrieval by last created
+        CREATE INDEX IF NOT EXISTS idx_owner_profile_created_at 
+            ON owner_profile(created_at DESC);
+
+        -- BMO identity: fats retrieval by last updated 
+        CREATE INDEX IF NOT EXISTS idx_bmo_identity_created_at
+            ON bmo_identity(last_updated DESC)
     """
 
     # Execute the SQL commands to create the tables
