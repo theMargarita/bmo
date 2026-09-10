@@ -4,8 +4,8 @@ from datetime import date, datetime
 
 from config import DB_PATH
 
-IDENTITY_FILE = "data/identity.json"
-OWNER_FILE = "data/owner.json"
+# IDENTITY_FILE = "data/identity.json"
+# OWNER_FILE = "data/owner.json"
 
 MOOD_DESCRIPTIONS = {
     "curious": "You are in an exploratory headspace. You think out loud and ask follow-up questions when genuinely interested.",

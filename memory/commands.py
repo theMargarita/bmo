@@ -175,7 +175,8 @@ async def run_bmo():
 
         if user_input.lower().startswith("energy "):
             new_energy = user_input[7:].strip()
-            identity.set_energy(new_energy)
+            # identity.set_energy(new_energy)
+            await asyncio.to_thread(identity.set_energy, new_energy)
             print_bmo(f"Energy level updated to {new_energy}.")
             continue
 
