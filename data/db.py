@@ -1,7 +1,7 @@
 import sqlite3
 
-# The 'with' statement automatically handles closing the connection when done!
 with sqlite3.connect("data/bmo_memory.db") as connection:
+    connection.execute("PRAGMA foreign_keys = ON")
     cursor = connection.cursor()
     print("Database created and connected successfully")
 
@@ -73,6 +73,32 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
             detail TEXT, --extra info if crash etc
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        --BMO identity table
+        -- Table: bmo_identiy
+        CREATE TABLE IF NOT EXISTS bmo_identity (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mood TEXT NOT NULL,
+            energy TEXT NOT NULL,
+            current_goals JSON NOT NULL, 
+            beliefs_about_self JSON NOT NULL, 
+            things_interesting JSON NOT NULL, 
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        --Owner profile
+        --Table: owner_profile
+        CREATE TABLE IF NOT EXISTS owner_profile(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            name TEXT NOT NULL, 
+            preferred_language TEXT NOT NULL, 
+            interests JSON NOY NULL, 
+            expertise JSON NOT NULL,
+            favorite_stuff JSON NOT NULL, 
+            notes TEXT NOT NULL, 
+            relationship_started TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     """
 
     index_query = """
@@ -101,6 +127,14 @@ with sqlite3.connect("data/bmo_memory.db") as connection:
         -- BMO state: fast retrieval of recent state
         CREATE INDEX IF NOT EXISTS idx_bmo_state_created_at 
             ON bmo_state(last_updated DESC);
+
+        -- Owner profile: fast retrieval by last created
+        CREATE INDEX IF NOT EXISTS idx_owner_profile_created_at 
+            ON owner_profile(created_at DESC);
+
+        -- BMO identity: fats retrieval by last updated 
+        CREATE INDEX IF NOT EXISTS idx_bmo_identity_created_at
+            ON bmo_identity(last_updated DESC)
     """
 
     # Execute the SQL commands to create the tables

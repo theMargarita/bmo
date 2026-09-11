@@ -40,6 +40,6 @@ class LLMClient:
             self.client.list()
             # self.client.get_model(self.model)
             return True
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"LLM model not available: {e}")
             return False
