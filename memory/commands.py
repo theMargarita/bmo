@@ -5,6 +5,8 @@ from brain.llm import LLMClient
 from brain.prompt_builder import PromptBuilder
 from config import DB_PATH
 from memory.bmo_memory_async import BMOMemoryAsync
+
+# from memory.daily_summarizer import DailySummarizer
 from memory.short_term import ShortTermMemory
 from memory.identity import Identity
 from brain.personality import get_system_prompt
@@ -39,12 +41,6 @@ async def run_bmo():
     if not llm_client.is_available():
         print("\n[Error] Cannot reach Ollama.")
         sys.exit(1)
-
-    # name = input("Who am I speaking to? ").strip()
-    # if not name:
-    #     name = "Stranger"
-
-    # user_id = bmo_memory.get_or_create_user(name)
 
     last_state = bmo_memory.get_bmo_state()  # sync — called once at startup
     baseline_mood = last_state["mood"] if last_state else "Normal"
@@ -149,6 +145,9 @@ async def run_bmo():
                 recent_messages=history_text,
             )
 
+            # summarizer = DailySummarizer()
+            # await summarizer.summerize_and_save(bmo_memory, user_id=user_id)
+
             randomize = [
                 "Goodbye!",
                 "See you later!",
@@ -177,7 +176,8 @@ async def run_bmo():
 
         if user_input.lower().startswith("energy "):
             new_energy = user_input[7:].strip()
-            identity.set_energy(new_energy)
+            # identity.set_energy(new_energy)
+            await asyncio.to_thread(identity.set_energy, new_energy)
             print_bmo(f"Energy level updated to {new_energy}.")
             continue
 

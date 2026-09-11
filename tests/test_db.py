@@ -207,7 +207,7 @@ class TestSearchContextUnit:
 
 class TestConversationsUnit:
     def test_save_conversations_returns_id(self, unit_mem):
-        db_path, _, mem = unit_mem
+        _db_path, _, mem = unit_mem
         conv_id = mem.save_conversations(user_id=1, message="Hello", summary=None)
         assert conv_id is not None
         assert isinstance(conv_id, int)

@@ -69,11 +69,10 @@ class BMOsMemory:
                 print(f"[Database] Default user '{owner_name}' created as User ID 1.")
 
     # chromadb har no async API so it stays sync
-    ##comments
     def count(self) -> int:
         try:
             return self.collection.count()
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Error counting memories: {e}")
             return 0
 
@@ -113,7 +112,7 @@ class BMOsMemory:
 
     #'core' memory saving
     def save(
-        self, content: str, source: str, importance: int = None, tags: list = None
+        self, content: str, source: str, importance: int |None = None, tags: list | None = None
     ):
         try:
             if importance is None:
@@ -152,12 +151,12 @@ class BMOsMemory:
                     f"[Memory] Librarian successfully archived {len(chunks)} new memory chunks."
                 )
 
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Error saving memory: {e}")
 
     # same here
     def update_bmo_state(
-        self, event: str, status: str, mood: str = None, detail: str = None
+        self, event: str, status: str, mood: str | None = None, detail: str |None = None
     ):
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -167,7 +166,7 @@ class BMOsMemory:
                     (event, status, mood, detail),
                 )
                 conn.commit()
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Could not update BMO's status: {e}")
 
     def get_bmo_state(self):
@@ -185,7 +184,7 @@ class BMOsMemory:
                         "mood": row[2],
                         "detail": row[3],
                     }
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Could not fetch BMOs status: {e}")
             return None
 
@@ -214,6 +213,6 @@ class BMOsMemory:
             scored.sort(reverse=True)
             return [doc for _, doc in scored[:3]]
 
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Could not update user: {e}")
             return []

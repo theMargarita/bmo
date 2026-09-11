@@ -12,7 +12,7 @@ class PromptBuilder:
         self.memory_system = memory_system
 
     def build(
-        self, history, memories, bmo_thought, game_context: str = None
+        self, history, memories, bmo_thought, game_context: str | None = None
     ) -> list[dict]:
         messages = []
         # core system prompt with personality and mood
@@ -52,7 +52,7 @@ class PromptBuilder:
 
     # -------fetching BMO's internal state from the database------
     async def build_with_personalities(
-        self, user_input, user_id, history, game_context: str = None
+        self, user_input, user_id, history, game_context: str | None = None
     ):
         thoughts = await self.memory_system.fetch_bmos_thoughts(user_id)
         instructions = f"""

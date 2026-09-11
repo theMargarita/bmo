@@ -64,7 +64,7 @@ class BMOMemoryAsync(BMOsMemory):
                 )
                 await conn.commit()
                 return cursor.lastrowid
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Error saving conversation: {e}")
             return None
 
@@ -76,7 +76,7 @@ class BMOMemoryAsync(BMOsMemory):
                     (conversation_id, role_id, content),
                 )
                 await conn.commit()
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Could not save chat message: {e}")
 
     async def get_conversation_history(self, conversation_id: int) -> list:
@@ -106,7 +106,7 @@ class BMOMemoryAsync(BMOsMemory):
                     )
                     await conn.commit()
                     return cursor.fetchall()
-        except Exception as e:
+        except Exception as e: # noqa: BLE001
             print(f"Could not update user: {e}")
 
     async def fetch_bmos_thoughts(self, user_id: int) -> dict:
