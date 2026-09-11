@@ -74,7 +74,7 @@ class DailySummarizer:
         try:
             summary = await asyncio.to_thread(self.llm.chat, messages)
             return summary.strip() if summary else None
-        except Exception as e:  # wont crash on quit
+        except Exception as e:  # noqa: BLE001
             print(f"[DailySummarizer] Error during summarization: {e}")
             return None
 

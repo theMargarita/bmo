@@ -1,6 +1,6 @@
 import json
 import sqlite3
-from datetime import date, datetime
+from datetime import datetime
 
 from config import DB_PATH
 
@@ -76,7 +76,7 @@ class Identity:
                         json.dumps([]),
                         json.dumps([]),
                         "like to be corrected if grammar seems off.",
-                        date.today().isoformat(),
+                        datetime.today().isoformat(),
                     ),
                 )
                 print("[Identity] Default owner_profile row created.")
@@ -276,10 +276,11 @@ class Identity:
 
     # ---------- time based mood ----------
     def auto_shift_mood(self):
-        hour = datetime.now().hour
+        now = datetime.now().astimezone()
+        hour = now.hour
         current = self._get_latest_identity()
         last_updated_date = current["last_updated"][:10]  # "YYYY-MM-DD HH:MM:SS"
-        today = date.today().isoformat()
+        today = now.date().isoformat()
 
         # Only auto-shift mood once per day to avoid rapid changes
         if last_updated_date != today:
