@@ -76,7 +76,7 @@ class Identity:
                         json.dumps([]),
                         json.dumps([]),
                         "like to be corrected if grammar seems off.",
-                        datetime.today().isoformat(),
+                        datetime.now().astimezone().date().isoformat(),
                     ),
                 )
                 print("[Identity] Default owner_profile row created.")

@@ -35,7 +35,8 @@ class Moods(Enum):
     CRANKY = "cranky"
     NEUTRAL = "neutral"
 
-    POSSIBLE_MOODS = ["happy", "cranky", "sleepy", "excited", "curious", "thoughtful"]
+
+POSSIBLE_MOODS = ["happy", "cranky", "sleepy", "excited", "curious", "thoughtful"]
 
 
 weekday_moods = {
